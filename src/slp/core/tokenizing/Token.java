@@ -1,4 +1,4 @@
-package slp.tokenizing.core;
+package slp.core.tokenizing;
 
 public class Token {
 	
