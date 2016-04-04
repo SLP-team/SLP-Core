@@ -1,12 +1,12 @@
 package slp.core.util;
 
 public class Pair<T, V> {
-	public final T t;
-	public final V v;
+	public final T left;
+	public final V right;
 	
 	public Pair(T t, V v) {
-		this.t = t;
-		this.v = v;
+		this.left = t;
+		this.right = v;
 	}
 	
 	public static <A, B> Pair<A, B> of(A a, B b) {

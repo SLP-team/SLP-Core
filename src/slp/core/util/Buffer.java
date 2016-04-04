@@ -3,14 +3,27 @@ package slp.core.util;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-public class Buffer<T> implements Function<T, T[]> {
+public class Buffer<T> implements Function<T, Stream<T>> {
 	private int capacity;
 	private T[] queue;
 	private int queueStart;
 	private int queueEnd;
 
+	public Buffer() {
+		clean();
+	}
+
 	public Buffer(int capacity) {
+		clean(capacity);
+	}
+
+	public void clean() {
+		clean(Configuration.order());
+	}
+
+	public void clean(int capacity) {
 		this.capacity = capacity;
 		this.queue = null;
 		this.queueStart = 0;
@@ -18,7 +31,7 @@ public class Buffer<T> implements Function<T, T[]> {
 	}
 
 	public static <X> Buffer<X> of(Class<X> type) {
-		return new Buffer<X>(Configuration.order());
+		return new Buffer<X>();
 	}
 
 	private void add(T t) {
@@ -36,7 +49,7 @@ public class Buffer<T> implements Function<T, T[]> {
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public T[] apply(T t) {
+	public Stream<T> apply(T t) {
 		if (this.queue == null) {
 			this.queue = (T[]) Array.newInstance(t.getClass(), this.capacity + 1);
 		}
@@ -46,14 +59,14 @@ public class Buffer<T> implements Function<T, T[]> {
 
 		if (this.queueStart < this.queueEnd) {
 			T[] copyOfRange = Arrays.copyOfRange(this.queue, this.queueStart, this.queueEnd);
-			return copyOfRange;
+			return Arrays.stream(copyOfRange);
 		} else {
 			int num = (this.queueEnd - this.queueStart + length) % length;
 			T[] result = (T[]) Array.newInstance(t.getClass(), num);
 
 			System.arraycopy(this.queue, this.queueStart, result, 0, length - this.queueStart);
 			System.arraycopy(this.queue, 0, result, length - this.queueStart, this.queueEnd);
-			return result;
+			return Arrays.stream(result);
 		}
 	}
 }

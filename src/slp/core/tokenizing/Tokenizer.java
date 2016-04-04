@@ -10,4 +10,7 @@ public interface Tokenizer {
 
 	public Token tokenizeWord(String word);
 	
+	public static Tokenizer standard() {
+		return new SimpleTokenizer();
+	}
 }
