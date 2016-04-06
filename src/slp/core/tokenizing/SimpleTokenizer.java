@@ -9,11 +9,6 @@ public class SimpleTokenizer implements Tokenizer {
 	public Stream<Token> tokenize(String text) {
 		return Arrays.stream(text.split("\\s+")).map(this::tokenizeWord);
 	}
-
-	@Override
-	public Stream<Token> tokenize(Stream<String> words) {
-		return words.map(this::tokenizeWord);
-	}
 	
 	@Override
 	public Token tokenizeWord(String word) {

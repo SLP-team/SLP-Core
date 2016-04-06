@@ -6,9 +6,13 @@ public interface Tokenizer {
 
 	public Stream<Token> tokenize(String text);
 	
-	public Stream<Token> tokenize(Stream<String> words);
+	public default Stream<Token> tokenize(Stream<String> words) {
+		return words.map(this::tokenizeWord);
+	}
 
-	public Token tokenizeWord(String word);
+	public default Token tokenizeWord(String word) {
+		return new Token(word);
+	}
 	
 	public static Tokenizer standard() {
 		return new SimpleTokenizer();

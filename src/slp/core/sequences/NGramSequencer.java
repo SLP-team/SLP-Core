@@ -12,15 +12,14 @@ public class NGramSequencer implements Sequencer {
 	public NGramSequencer() {
 		this.buffer = new Buffer<Token>();
 	}
-	
-	@Override
-	public Stream<Stream<Token>> sequence(Stream<Token> in) {
-		this.buffer.clean();
-		return in.map(this::sequence);
-	}
 
 	@Override
 	public Stream<Token> sequence(Token in) {
 		return this.buffer.apply(in);
+	}
+
+	@Override
+	public void reset() {
+		this.buffer.clean();
 	}
 }

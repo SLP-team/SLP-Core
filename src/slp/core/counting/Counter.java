@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 public interface Counter extends Externalizable {
 	
 	public static Counter standard() {
-		return new TrieGramCounter();
+		return new TrieGramCounterHackArray();
 	}
 
 	/*

@@ -21,20 +21,21 @@ public class SimpleRunner {
 		double log2 = -Math.log(2);
 		Tokenizer tokenizer = Tokenizer.standard();
 		Sequencer sequencer = Sequencer.standard();
-//		Vocabulary vocabulary = new Vocabulary();
-//		Counter counter = Counter.standard();
-		Pair<Vocabulary, Counter> read = CountsReader.read(new File("counter.out"));
-		Vocabulary vocabulary = read.left;
-		Counter counter = read.right;
-		Model model = Model.standard(counter);
-		
+
+		Vocabulary vocabulary = new Vocabulary();
+		Counter counter = Counter.standard();
 		Reader.readLines(trainFile)
 			.map(tokenizer::tokenize)
 			.flatMap(sequencer::sequence)
 			.map(vocabulary::toIndices)
 			.forEachOrdered(counter::addBackwards);
+
+		System.out.println((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
 //		readWrite(vocabulary, counter);
-		
+//		Pair<Vocabulary, Counter> read = CountsReader.read(new File("counter.out"));
+//		Vocabulary vocabulary = read.left;
+//		Counter counter = read.right;
+		Model model = Model.standard(counter);
 		double prob = Reader.readLines(testFile)
 			.map(tokenizer::tokenize)
 			.flatMap(sequencer::sequence)

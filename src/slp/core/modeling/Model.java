@@ -19,6 +19,7 @@ public interface Model {
 	 * @param in
 	 * @return
 	 */
+	// TODO: make mandatory
 	public default Pair<Double, Double> modelWithConfidence(Stream<Integer> in) {
 		return Pair.of(model(in), 1.0);
 	}

@@ -40,10 +40,10 @@ public class TrieGramCounter implements Counter {
 		this.countsMap = countsMap;
 	}
 
-	private void init() {
+	private void initTreeStructure() {
 		if (this.successors == null) {
 			this.successors = new HashMap<Integer, TrieGramCounter>();
-			this.countsMap = HashMultimap.create();	
+//			this.countsMap = HashMultimap.create();	
 		}
 	}
 
@@ -75,7 +75,6 @@ public class TrieGramCounter implements Counter {
 	 * Getters and setters related to successors
 	 */
 	public Map<Integer, TrieGramCounter> getSuccessors() {
-		if (this.successors == null) init();
 		return this.successors;
 	}
 	
@@ -84,7 +83,7 @@ public class TrieGramCounter implements Counter {
 	}
 
 	public final TrieGramCounter getOrPutSuccessor(Integer key) {
-		init();
+		initTreeStructure();
 		TrieGramCounter trieGramCounter = getSuccessor(key);
 		if (trieGramCounter == null) {
 			trieGramCounter = new TrieGramCounter(key);
@@ -97,11 +96,15 @@ public class TrieGramCounter implements Counter {
 		this.successors.put(key, trieGramCounter);
 	}
 
+	private void removeSuccessor(int index) {
+		if (this.successors == null) return;
+		else this.successors.remove(index);
+	}
+
 	/*
 	 * Getters and setters related to the counts map
 	 */
 	public Multimap<Integer, TrieGramCounter> getCountsMap() {
-		if (this.countsMap == null) init();
 		return this.countsMap;
 	}
 
@@ -122,7 +125,7 @@ public class TrieGramCounter implements Counter {
 		TrieGramCounter last = path[path.length - 1];
 		last.updateCount(count);
 		path[0].updateCount(count);
-		path[path.length - 2].updateCountsMap(last, count);
+		path[path.length - 2].updateMaps(last, count);
 	}
 
 	@Override
@@ -132,17 +135,24 @@ public class TrieGramCounter implements Counter {
 			TrieGramCounter counter = path[i];
 			counter.updateCount(count);
 			if (i > 0) {
-				path[i - 1].updateCountsMap(counter, count);
+				path[i - 1].updateMaps(counter, count);
 			}
 		}
 	}
 
-	private void updateCountsMap(TrieGramCounter successor, boolean added) {
+	private void updateMaps(TrieGramCounter successor, boolean added) {
 		Multimap<Integer, TrieGramCounter> countsMap = getCountsMap();
+		if (countsMap == null) return;
+		// Update new count stats
 		int count = successor.getCount();
-		int old = count + (added ? -1 : 1);
 		if (count != 0) countsMap.put(count, successor);
-		if (old != 0) countsMap.remove(count, successor);
+		else removeSuccessor(successor.getIndex());
+		// Update previous count
+		int old = count + (added ? -1 : 1);
+		if (old != 0) {
+			countsMap.remove(old, successor);
+			if (countsMap.get(old).isEmpty()) countsMap.removeAll(old);
+		}
 	}
 
 	/*
