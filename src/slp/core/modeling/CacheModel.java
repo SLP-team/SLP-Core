@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
-import slp.core.counting.TrieGramCounter;
 
 public class CacheModel implements Model {
 
@@ -24,7 +23,7 @@ public class CacheModel implements Model {
 	}
 
 	public CacheModel(int capacity) {
-		this(capacity, new TrieGramCounter());
+		this(capacity, Counter.standard());
 	}
 
 	public CacheModel(Counter counter) {

@@ -20,6 +20,10 @@ public class Reader {
 		}
 	}
 
+	public static Stream<String> readLines(String path) {
+		return readLines(new File(path));
+	}
+	
 	public static Stream<String> readLines(File file) {
 		try {
 			return Files.lines(file.toPath(), StandardCharsets.ISO_8859_1);
