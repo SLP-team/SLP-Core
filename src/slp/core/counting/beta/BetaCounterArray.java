@@ -32,19 +32,25 @@ public class BetaCounterArray extends BetaCounter {
 
 	@Override
 	public boolean update(List<Integer> indices, int index, boolean count) {
+		BetaCounter.counts[1]++;
 		// Cannot accommodate successors two steps ahead
 		if (index < indices.size()) {
+			BetaCounter.times[1] -= System.currentTimeMillis();
 			Integer key = indices.get(index);
 			int successorIndex = getOrCreateSuccessorIndex(key);
 			// Out of capacity
 			if (successorIndex < 0) {
+				BetaCounter.times[1] += System.currentTimeMillis();
 				return false;
 			}
 			// Try to update the successor
 			BetaCounter successor = this.array[successorIndex];
+			BetaCounter.times[1] += System.currentTimeMillis();
 			boolean success = successor.update(indices, index + 1, count);
 			if (!success) {
+				BetaCounter.times[1] -= System.currentTimeMillis();
 				BetaCounter newSuccessor = promote(key);
+				BetaCounter.times[1] += System.currentTimeMillis();
 				// cannot promote successor past Array
 				if (newSuccessor == null) return false;
 				this.array[successorIndex] = newSuccessor;
@@ -52,11 +58,16 @@ public class BetaCounterArray extends BetaCounter {
 			}
 			// If a successor hits zero, remove it
 			else if (successor.getCount() == 0) {
+				BetaCounter.times[1] -= System.currentTimeMillis();
 				removeSuccessor(key);
+				BetaCounter.times[1] += System.currentTimeMillis();
 			}
 		}
 		else {
+			BetaCounter.times[1] -= System.currentTimeMillis();
 			this.updateCount(count);
+			this.updateNCounts(indices.size(), this.getCount(), count);
+			BetaCounter.times[1] += System.currentTimeMillis();
 		}
 		return true;
 	}
@@ -71,14 +82,33 @@ public class BetaCounterArray extends BetaCounter {
 	protected int getOrCreateSuccessorIndex(Integer key) {
 		int nextIndex = getSuccessorIndex(key);
 		if (nextIndex >= 0) return nextIndex;
-		else if (nextIndex == NONE) return -1;
-		// If getSuccessorIndex fails to find the key, it returns the negative of the first open slot minus 1
 		else {
+			// If getSuccessorIndex fails to find the key, it returns the negative of the first open slot minus 1 or NONE
+			if (nextIndex == NONE) {
+				nextIndex = tryToGrow(key);
+				// Still NONE, give up
+				if (nextIndex == NONE) return -1;
+			}
 			int index = -(nextIndex + 1);
 			BetaCounter value = new BetaCounterSingles();
 			this.indices[index] = key;
 			this.array[index] = value;
 			return index;
+		}
+	}
+
+	private int tryToGrow(Integer key) {
+		if (this.indices.length < MAX_SIZE) {
+			int length = this.indices.length;
+			int newLength = 4*length;
+			this.indices = Arrays.copyOf(indices, newLength);
+			this.array = Arrays.copyOf(array, newLength);
+			for (int i = length; i < this.indices.length; i++) {
+				this.indices[i] = NONE;
+			}
+			return -length - 1;
+		} else {
+			return NONE;
 		}
 	}
 
@@ -98,21 +128,7 @@ public class BetaCounterArray extends BetaCounter {
 				return -i - 1;
 			}
 		}
-		return tryToGrow(key);
-	}
-
-	private int tryToGrow(Integer key) {
-		if (this.indices.length < MAX_SIZE) {
-			int length = this.indices.length;
-			this.indices = Arrays.copyOf(indices, 2*length);
-			this.array = Arrays.copyOf(array, 2*length);
-			for (int i = length; i < this.indices.length; i++) {
-				this.indices[i] = NONE;
-			}
-			return getSuccessorIndex(key);
-		} else {
-			return NONE;
-		}
+		return NONE;
 	}
 
 	private void removeSuccessor(Integer key) {
@@ -150,24 +166,24 @@ public class BetaCounterArray extends BetaCounter {
 
 	@Override
 	protected int[] getDistinctCounts(int range, List<Integer> sequence, int index) {
-		Integer next = sequence.get(index);
-		BetaCounter successor = getSuccessor(next);
-		if (index == sequence.size()) {
+		if (index < sequence.size()) {
+			Integer next = sequence.get(index);
+			BetaCounter successor = getSuccessor(next);
+			if (successor != null) {
+				return successor.getDistinctCounts(range, sequence, index + 1);
+			}
+			else {
+				return new int[range];
+			}
+		} else {
 			int[] distinctCounts = new int[range];
 			for (int i = 0; i < this.array.length; i++) {
 				if (this.array[i] == null) break;
-				else {
-					int count = this.array[i].getCount();
-					if (count > range) count = range;
-					distinctCounts[count - 1]++;
-				}
+				int count = this.array[i].getCount();
+				if (count > range) count = range;
+				distinctCounts[count - 1]++;
 			}
 			return distinctCounts;
-		} else if (successor != null) {
-			return successor.getDistinctCounts(range, sequence, index + 1);
-		}
-		else {
-			return new int[range];
 		}
 	}
 

@@ -33,18 +33,21 @@ public class BetaCounterSingles extends BetaCounter {
 		else if (index < indices.size()) {
 			if (this.successor1Index == index) {
 				this.successor1Count += (count ? 1 : - 1);
+				this.updateNCounts(indices.size(), this.successor1Count, count);
 				if (this.successor1Count == 0) {
 					this.successor1Index = NONE;
 				}
 			}
 			else if (this.successor2Index == index) {
 				this.successor2Count += (count ? 1 : -1);
+				this.updateNCounts(indices.size(), this.successor2Count, count);
 				if (this.successor2Count == 0) {
 					this.successor2Index = NONE;
 				}
 			}
 			else if (this.successor3Index == index) {
 				this.successor3Count += (count ? 1 : -1);
+				this.updateNCounts(indices.size(), this.successor3Count, count);
 				if (this.successor3Count == 0) {
 					this.successor3Index = NONE;
 				}
@@ -55,6 +58,7 @@ public class BetaCounterSingles extends BetaCounter {
 		}
 		else {
 			this.updateCount(count);
+			this.updateNCounts(indices.size(), this.getCount(), count);
 		}
 		return true;
 	}
@@ -91,20 +95,18 @@ public class BetaCounterSingles extends BetaCounter {
 	@Override
 	protected int[] getDistinctCounts(int range, List<Integer> sequence, int index) {
 		int[] distinctCounts = new int[range];
-		if (index == sequence.size() - 1) {
-			int dis1 = Math.min(this.successor1Count, range - 1);
-			if (dis1 > 0) {
-				distinctCounts[dis1]++;
+		if (index == sequence.size()) {
+			if (this.successor1Index != NONE) {
+				distinctCounts[Math.min(range, this.successor1Count) - 1]++;
+				if (this.successor2Index != NONE) {
+					distinctCounts[Math.min(range, this.successor2Count) - 1]++;
+					if (this.successor3Index != NONE) {
+						distinctCounts[Math.min(range, this.successor3Count) - 1]++;
+					}
+				}
 			}
-			int dis2 = Math.min(this.successor2Count, range - 1);
-			if (dis2 > 0) {
-				distinctCounts[dis2]++;
-			}
-			return distinctCounts;
 		}
-		else {
-			return distinctCounts;
-		}
+		return distinctCounts;
 	}
 
 	@Override

@@ -10,24 +10,26 @@ import slp.core.sequences.Sequencer;
 import slp.core.tokenizing.Tokenizer;
 import slp.core.util.Reader;
 
-public class SimpleRunner {
+public class ExampleRunnerCode {
 	
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
-		File trainFile = new File("../java/temp");
-		File testFile = new File("../java/temp2");
+		File trainFile = new File("../java/fold0.train");
+		File testFile = new File("../java/fold1.train");
 		double log2 = -Math.log(2);
 		Tokenizer tokenizer = Tokenizer.standard();
 		Sequencer sequencer = Sequencer.standard();
-
 		Vocabulary vocabulary = new Vocabulary();
 		Counter counter = Counter.standard();
+		
+		long t = System.currentTimeMillis();
 		Reader.readLines(trainFile)
 			.map(tokenizer::tokenize)
 			.flatMap(sequencer::sequence)
 			.map(vocabulary::toIndices)
 			.forEachOrdered(counter::addBackwards);
 
-		System.out.println((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
+		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
+		System.out.println((System.currentTimeMillis() - t)/1000 + "\t" + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
 		Model model = Model.standard(counter);
 		double prob = Reader.readLines(testFile)
 			.map(tokenizer::tokenize)

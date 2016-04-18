@@ -16,6 +16,8 @@ public class Vocabulary implements Externalizable {
 	private static final long serialVersionUID = -1572227007765465883L;
 	private BiMap<String, Integer> wordIndices;
 	
+	public static int size;
+	
 	public Vocabulary() {
 		this.wordIndices = HashBiMap.create();
 	}
@@ -24,6 +26,14 @@ public class Vocabulary implements Externalizable {
 		return new Vocabulary();
 	}
 
+	public Stream<Integer> translate(Stream<String> words) {
+		return words.map(this::translate);
+	}
+	
+	public Integer translate(String word) {
+		return this.wordIndices.get(word);
+	}
+	
 	public Stream<Integer> wordsToIndices(Stream<String> words) {
 		return words.map(this::toIndex);
 	}
@@ -33,6 +43,7 @@ public class Vocabulary implements Externalizable {
 		if (index == null) {
 			index = this.wordIndices.size();
 			this.wordIndices.put(word, index);
+			size = this.wordIndices.size();
 		}
 		return index;
 	}
@@ -59,7 +70,7 @@ public class Vocabulary implements Externalizable {
 	
 	public Integer findIndex(Token token) {
 		return findIndex(token.text());
-	}
+	}	
 	
 	public Stream<String> findWords(Stream<Integer> indices) {
 		return indices.map(this::findWord);

@@ -5,10 +5,19 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
+import slp.core.util.Configuration;
 
 public abstract class BetaCounter implements Counter {
 
 	protected int count;
+	
+	public static int[] times = new int[] {
+			0, 0, 0, 0, 0, 0, 0, 0	
+		};
+	public static int[] counts = new int[] {
+			0, 0, 0, 0, 0, 0, 0, 0	
+		};
+	protected static int[][] nCounts = new int[Configuration.order()][4];
 	
 	public BetaCounter() {
 		this.count = 0;
@@ -19,7 +28,22 @@ public abstract class BetaCounter implements Counter {
 		return this.count;
 	}
 	
-	public synchronized void updateCount(boolean count) {
+	public void updateNCounts(int n, int count, boolean added) {
+		if (n == 0) return;
+		if (count > 0 && count < 5) {
+			nCounts[n - 1][count - 1]++;
+		}
+		int prevCount = added ? count - 1 : count + 1;
+		if (prevCount > 0 && prevCount < 5) {
+			nCounts[n - 1][prevCount - 1]--;
+		}
+	}
+	
+	public int getNCount(int n, int count) {
+		return nCounts[n - 1][count - 1];
+	}
+	
+	public void updateCount(boolean count) {
 		if (count) inc(); else dec();
 	}
 

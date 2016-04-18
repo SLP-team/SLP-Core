@@ -25,6 +25,8 @@ public interface Counter extends Externalizable {
 	public abstract int getCount();
 
 	public abstract int getDistinctSuccessors();
+	
+	public abstract int getNCount(int n, int count);
 
 	public void update(Stream<Integer> indexStream, boolean count);
 
@@ -59,7 +61,7 @@ public interface Counter extends Externalizable {
 	}
 
 	/**
-	 * Update the counter with all (sub-)sequences that contain the last element in the provided sequence.
+	 * Update the counter with all (sub-)sequences that contain the last element in the provided sequence (and the empty sequence).
 	 */
 	public default void updateBackward(Stream<Integer> indexStream, boolean count) {
 		List<Integer> indices = indexStream.collect(Collectors.toList());

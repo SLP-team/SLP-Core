@@ -31,7 +31,7 @@ public class CacheModel implements Model {
 	}
 
 	public CacheModel(int capacity, Counter counter) {
-		this(capacity, counter, new SimpleModel(counter));
+		this(capacity, counter, new JMModel(counter));
 	}
 
 	public CacheModel(int capacity, Counter counter, Model model) {
@@ -42,9 +42,9 @@ public class CacheModel implements Model {
 	}
 	
 	@Override
-	public double model(Stream<Integer> in) {
+	public double modelSequence(Stream<Integer> in) {
 		List<Integer> sequence = in.collect(Collectors.toList());
-		double prob = this.model.model(sequence.stream());
+		double prob = this.model.modelSequence(sequence.stream());
 		updateCache(sequence);
 		return prob;
 	}
