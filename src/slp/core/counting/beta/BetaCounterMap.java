@@ -12,6 +12,7 @@ import com.google.common.collect.Multimap;
 
 public class BetaCounterMap extends BetaCounter {
 
+	private static final int COUNT_OF_COUNTS_CUTOFF = 5;
 	private Map<Integer, BetaCounter> successors;
 	private Multimap<Integer, BetaCounter> countsMap;
 
@@ -28,38 +29,22 @@ public class BetaCounterMap extends BetaCounter {
 
 	@Override
 	public boolean update(List<Integer> indices, int index, boolean count) {
-		BetaCounter.counts[0]++;
 		if (index < indices.size()) {
-			BetaCounter.times[0] -= System.currentTimeMillis();
-			BetaCounter.times[2] -= System.currentTimeMillis();
 			Integer key = indices.get(index);
 			BetaCounter next = getOrCreateSuccessor(key);
-			next = promote(key);
-			BetaCounter.times[0] += System.currentTimeMillis();
-			BetaCounter.times[2] += System.currentTimeMillis();
 			boolean success = next.update(indices, index + 1, count);
 			if (!success) {
 				// If can't update next, promote next and retry
-				BetaCounter.times[0] -= System.currentTimeMillis();
 				next = promote(key);
-				BetaCounter.times[0] += System.currentTimeMillis();
 				return update(indices, index, count);
 			}
 			if (index == indices.size() - 1) {
-				BetaCounter.times[0] -= System.currentTimeMillis();
-				BetaCounter.times[3] -= System.currentTimeMillis();
 				updateMaps(next, key, count);
-				BetaCounter.times[0] += System.currentTimeMillis();
-				BetaCounter.times[3] += System.currentTimeMillis();
 			}
 		}
 		else {
-			BetaCounter.times[0] -= System.currentTimeMillis();
-			BetaCounter.times[4] -= System.currentTimeMillis();
 			this.updateCount(count);
 			this.updateNCounts(indices.size(), this.getCount(), count);
-			BetaCounter.times[0] += System.currentTimeMillis();
-			BetaCounter.times[4] += System.currentTimeMillis();
 		}
 		// Always successful
 		return true;
@@ -68,19 +53,22 @@ public class BetaCounterMap extends BetaCounter {
 	private void updateMaps(BetaCounter successor, Integer index, boolean added) {
 		// Update new count stats
 		int count = successor.getCount();
-		if (count == 0) this.successors.remove(index);
-		
-		if (count != 0) this.countsMap.put(count, successor);
-		int old = count + (added ? -1 : 1);
-		// Update previous count
-//		if (old != 0) {
-//			this.countsMap.remove(old, successor);
-//			if (this.countsMap.get(old).isEmpty()) this.countsMap.removeAll(old);
-//		}
+		if (count == 0) {
+			this.successors.remove(index);
+			// If old > 0, remove its count
+			if (!added) {
+				this.countsMap.remove(count + 1, successor);
+			}
+		}
+		else if (count < COUNT_OF_COUNTS_CUTOFF || (added && count == COUNT_OF_COUNTS_CUTOFF)) {
+			this.countsMap.remove(count + (added ? -1 : 1), successor);
+			this.countsMap.put(count, successor);
+		}
 	}
 
 	@Override
 	protected BetaCounter getOrCreateSuccessor(Integer index) {
+		// TODO: this is somewhat costly across many calls (~1 microsecond/invoc.).
 		BetaCounter next = getSuccessor(index);
 		if (next != null) return next;
 		else {

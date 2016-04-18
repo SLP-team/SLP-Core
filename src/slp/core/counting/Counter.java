@@ -66,7 +66,8 @@ public interface Counter extends Externalizable {
 	public default void updateBackward(Stream<Integer> indexStream, boolean count) {
 		List<Integer> indices = indexStream.collect(Collectors.toList());
 		for (int i = 0; i <= indices.size(); i++) {
-			update(indices.subList(i, indices.size()).stream(), count);
+			Stream<Integer> stream = indices.subList(i, indices.size()).stream();
+			update(stream, count);
 		}
 	}
 	

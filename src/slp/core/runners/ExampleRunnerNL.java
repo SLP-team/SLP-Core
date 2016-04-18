@@ -23,13 +23,10 @@ public class ExampleRunnerNL {
 		Counter counter = Counter.standard();
 		Model model = Model.standard(counter);
 		for (int i = 1; i < 6; i++) {
-			long t = System.currentTimeMillis();
 			System.out.print(i + "\t");
 			train(vocabulary, counter, new File("E:/LMCorpus/train2/" + (i < 10 ? "0" : "") + i));
 			double entropy = test(vocabulary, model, new File("E:/LMCorpus/test2/00"));
 			System.out.println(entropy);
-			System.out.println((System.currentTimeMillis() - t) + "\n" + Arrays.toString(BetaCounter.times));
-			System.out.println(Arrays.toString(BetaCounter.counts));
 		}
 		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
 	}

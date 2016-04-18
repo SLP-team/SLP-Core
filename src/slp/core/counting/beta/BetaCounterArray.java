@@ -32,42 +32,32 @@ public class BetaCounterArray extends BetaCounter {
 
 	@Override
 	public boolean update(List<Integer> indices, int index, boolean count) {
-		BetaCounter.counts[1]++;
 		// Cannot accommodate successors two steps ahead
 		if (index < indices.size()) {
-			BetaCounter.times[1] -= System.currentTimeMillis();
 			Integer key = indices.get(index);
 			int successorIndex = getOrCreateSuccessorIndex(key);
 			// Out of capacity
 			if (successorIndex < 0) {
-				BetaCounter.times[1] += System.currentTimeMillis();
 				return false;
 			}
 			// Try to update the successor
 			BetaCounter successor = this.array[successorIndex];
-			BetaCounter.times[1] += System.currentTimeMillis();
 			boolean success = successor.update(indices, index + 1, count);
 			if (!success) {
-				BetaCounter.times[1] -= System.currentTimeMillis();
 				BetaCounter newSuccessor = promote(key);
-				BetaCounter.times[1] += System.currentTimeMillis();
 				// cannot promote successor past Array
 				if (newSuccessor == null) return false;
 				this.array[successorIndex] = newSuccessor;
 				return update(indices, index, count);
 			}
 			// If a successor hits zero, remove it
-			else if (successor.getCount() == 0) {
-				BetaCounter.times[1] -= System.currentTimeMillis();
+			if (successor.getCount() == 0) {
 				removeSuccessor(key);
-				BetaCounter.times[1] += System.currentTimeMillis();
 			}
 		}
 		else {
-			BetaCounter.times[1] -= System.currentTimeMillis();
 			this.updateCount(count);
 			this.updateNCounts(indices.size(), this.getCount(), count);
-			BetaCounter.times[1] += System.currentTimeMillis();
 		}
 		return true;
 	}
@@ -86,7 +76,7 @@ public class BetaCounterArray extends BetaCounter {
 			// If getSuccessorIndex fails to find the key, it returns the negative of the first open slot minus 1 or NONE
 			if (nextIndex == NONE) {
 				nextIndex = tryToGrow(key);
-				// Still NONE, give up
+				// Still NONE? Give up
 				if (nextIndex == NONE) return -1;
 			}
 			int index = -(nextIndex + 1);

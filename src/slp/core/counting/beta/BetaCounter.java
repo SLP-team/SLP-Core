@@ -55,7 +55,6 @@ public abstract class BetaCounter implements Counter {
 		this.count--;
 	}
 
-
 	@Override
 	public final void update(Stream<Integer> indexStream, boolean count) {
 		update(indexStream.collect(Collectors.toList()), 0, count);
