@@ -10,13 +10,6 @@ import slp.core.util.Configuration;
 public abstract class BetaCounter implements Counter {
 
 	protected int count;
-	
-	public static int[] times = new int[] {
-			0, 0, 0, 0, 0, 0, 0, 0	
-		};
-	public static int[] counts = new int[] {
-			0, 0, 0, 0, 0, 0, 0, 0	
-		};
 	protected static int[][] nCounts = new int[Configuration.order()][4];
 	
 	public BetaCounter() {
@@ -56,15 +49,16 @@ public abstract class BetaCounter implements Counter {
 	}
 
 	@Override
-	public final void update(Stream<Integer> indexStream, boolean count) {
-		update(indexStream.collect(Collectors.toList()), 0, count);
+	public final void update(List<Integer> indices, boolean count) {
+		update(indices, 0, count, false);
 	}
 	
-	public abstract boolean update(List<Integer> indexStream, int index, boolean count);
+	@Override
+	public final void updateForward(List<Integer> indices, boolean count) {
+		update(indices, 0, count, true);
+	}
 	
-	protected abstract BetaCounter getOrCreateSuccessor(Integer first);
-
-	protected abstract BetaCounter getSuccessor(Integer first);
+	public abstract boolean update(List<Integer> indices, int index, boolean count, boolean fast);
 	
 	@Override
 	public int[] getShortCounts(Stream<Integer> indices) {

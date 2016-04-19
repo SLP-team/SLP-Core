@@ -13,6 +13,19 @@ public class Token {
 	}
 	
 	@Override
+	public boolean equals(Object other) {
+		if (this == other) return true;
+		else if (other == null) return false;
+		else if (!(other instanceof Token)) return false;
+		else return this.text.equals(((Token) other).text());
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.text.hashCode();
+	}
+	
+	@Override
 	public String toString() {
 		return this.text;
 	}

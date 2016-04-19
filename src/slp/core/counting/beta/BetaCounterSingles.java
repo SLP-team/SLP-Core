@@ -27,63 +27,98 @@ public class BetaCounterSingles extends BetaCounter {
 	}
 
 	@Override
-	public boolean update(List<Integer> indices, int index, boolean count) {
+	public boolean update(List<Integer> indices, int index, boolean count, boolean fast) {
 		// Cannot accommodate successors two steps ahead
 		if (index < indices.size() - 1) return false;
 		else if (index < indices.size()) {
-			if (this.successor1Index == index) {
+			Integer key = indices.get(index);
+			int updatedCount = 0;
+			if (this.successor1Index == NONE) {
+				if (!count) System.err.println("Attempt to remove unseen event");
+				this.successor1Index = key;
+				this.successor1Count = 1;
+				updatedCount = this.successor1Count;
+			}
+			else if (this.successor1Index == key) {
 				this.successor1Count += (count ? 1 : - 1);
-				this.updateNCounts(indices.size(), this.successor1Count, count);
+				updatedCount = this.successor1Count;
 				if (this.successor1Count == 0) {
-					this.successor1Index = NONE;
+					shift3();
 				}
 			}
-			else if (this.successor2Index == index) {
+			else if (this.successor2Index == NONE) {
+				if (!count) System.err.println("Attempt to remove unseen event");
+				this.successor2Index = key;
+				this.successor2Count = 1;
+				updatedCount = this.successor2Count;
+			}
+			else if (this.successor2Index == key) {
 				this.successor2Count += (count ? 1 : -1);
-				this.updateNCounts(indices.size(), this.successor2Count, count);
+				updatedCount = this.successor2Count;
 				if (this.successor2Count == 0) {
-					this.successor2Index = NONE;
+					shift2();
 				}
 			}
-			else if (this.successor3Index == index) {
+			else if (this.successor3Index == NONE) {
+				if (!count) System.err.println("Attempt to remove unseen event");
+				this.successor3Index = key;
+				this.successor3Count = 1;
+				updatedCount = this.successor3Count;
+			}
+			else if (this.successor3Index == key) {
 				this.successor3Count += (count ? 1 : -1);
-				this.updateNCounts(indices.size(), this.successor3Count, count);
+				updatedCount = this.successor3Count;
 				if (this.successor3Count == 0) {
-					this.successor3Index = NONE;
+					shift1();
 				}
 			}
 			else {
 				return false;
 			}
+			// If any update was successful, update the n-counts too
+			this.updateNCounts(indices.size(), updatedCount, count);
 		}
-		else {
+		if (fast || index == indices.size()) {
 			this.updateCount(count);
-			this.updateNCounts(indices.size(), this.getCount(), count);
+			this.updateNCounts(index, this.getCount(), count);
 		}
 		return true;
 	}
 
-	@Override
-	protected BetaCounter getOrCreateSuccessor(Integer first) {
-		return null;
+	private void shift3() {
+		this.successor1Index = this.successor2Index;
+		this.successor1Count = this.successor2Count;
+		shift2();
 	}
 
-	@Override
-	protected BetaCounter getSuccessor(Integer first) {
-		return null;
+	private void shift2() {
+		this.successor2Index = this.successor3Index;
+		this.successor2Count = this.successor3Count;
+		shift1();
+	}
+
+	private void shift1() {
+		this.successor3Count = 0;
+		this.successor3Index = NONE;
 	}
 
 	@Override
 	protected int[] getShortCounts(List<Integer> sequence, int index) {
 		int[] counts = new int[2];
 		if (index == sequence.size() - 1) {
-			counts[0] = this.count;
+			counts[1] = this.count;
 			Integer next = sequence.get(index);
+			if (this.successor1Index == NONE) return counts;
 			if (this.successor1Index == next) {
-				counts[1] = this.successor1Count;
+				counts[0] = this.successor1Count;
 			}
+			else if (this.successor2Index == NONE) return counts;
 			else if (this.successor2Index == next) {
-				counts[1] = this.successor2Count;
+				counts[0] = this.successor2Count;
+			}
+			else if (this.successor3Index == NONE) return counts;
+			else if (this.successor3Index == next) {
+				counts[0] = this.successor3Count;
 			}
 			return counts;
 		}

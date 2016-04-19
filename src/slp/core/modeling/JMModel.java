@@ -1,6 +1,6 @@
 package slp.core.modeling;
 
-import java.util.stream.Stream;
+import java.util.List;
 
 import slp.core.counting.Counter;
 
@@ -17,9 +17,9 @@ public class JMModel implements Model {
 		this.counter = counter;
 		this.LAMBDA = lambda;
 	}
-	
+
 	@Override
-	public double modelSequence(Stream<Integer> in) {
+	public double modelSequence(List<Integer> in) {
 		int[][] counts = this.counter.getFullCounts(in);
 		double probability = 0.0;
 		double mass = 1.0;

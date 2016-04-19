@@ -14,7 +14,7 @@ import slp.core.tokenizing.Token;
 public class Vocabulary implements Externalizable {
 
 	private static final long serialVersionUID = -1572227007765465883L;
-	private BiMap<String, Integer> wordIndices;
+	private BiMap<Token, Integer> wordIndices;
 	
 	public static int size;
 	
@@ -26,62 +26,34 @@ public class Vocabulary implements Externalizable {
 		return new Vocabulary();
 	}
 
-	public Stream<Integer> translate(Stream<String> words) {
-		return words.map(this::translate);
+	public Stream<Integer> translate(Stream<Token> tokens) {
+		return tokens.map(this::translate);
 	}
 	
-	public Integer translate(String word) {
-		return this.wordIndices.get(word);
+	public Integer translate(Token token) {
+		return this.wordIndices.get(token);
 	}
 	
-	public Stream<Integer> wordsToIndices(Stream<String> words) {
-		return words.map(this::toIndex);
-	}
-	
-	public Integer toIndex(String word) {
-		Integer index = this.wordIndices.get(word);
-		if (index == null) {
-			index = this.wordIndices.size();
-			this.wordIndices.put(word, index);
-			size = this.wordIndices.size();
-		}
-		return index;
-	}
-
 	public Stream<Integer> toIndices(Stream<Token> tokens) {
 		return tokens.map(this::toIndex);
 	}
 	
 	public Integer toIndex(Token token) {
-		return toIndex(token.text());
+		Integer index = this.wordIndices.get(token);
+		if (index == null) {
+			index = this.wordIndices.size();
+			this.wordIndices.put(token, index);
+			size = this.wordIndices.size();
+		}
+		return index;
 	}
-	
-	public Stream<Integer> findWordIndices(Stream<String> words) {
-		return words.map(this::findIndex);
-	}
-	
-	public Integer findIndex(String word) {
-		return this.wordIndices.get(word);
-	}
-	
-	public Stream<Integer> findIndices(Stream<Token> tokens) {
-		return tokens.map(this::findIndex);
-	}
-	
-	public Integer findIndex(Token token) {
-		return findIndex(token.text());
-	}	
-	
-	public Stream<String> findWords(Stream<Integer> indices) {
+
+	public Stream<Token> findWords(Stream<Integer> indices) {
 		return indices.map(this::findWord);
 	}
 	
-	public String findWord(Integer index) {
+	public Token findWord(Integer index) {
 		return this.wordIndices.inverse().get(index);
-	}
-	
-	public BiMap<String, Integer> getWordIndices() {
-		return wordIndices;
 	}
 
 	@Override
@@ -92,6 +64,6 @@ public class Vocabulary implements Externalizable {
 	@Override
 	@SuppressWarnings("unchecked")
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		this.wordIndices = (BiMap<String, Integer>) in.readObject();
+		this.wordIndices = (BiMap<Token, Integer>) in.readObject();
 	}
 }

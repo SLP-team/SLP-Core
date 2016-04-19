@@ -24,17 +24,17 @@ public class ExampleRunnerCode {
 		long t = System.currentTimeMillis();
 		Reader.readLines(trainFile)
 			.map(tokenizer::tokenize)
-			.flatMap(sequencer::sequence)
 			.map(vocabulary::toIndices)
-			.forEachOrdered(counter::addBackwards);
+			.flatMap(sequencer::sequenceForward)
+			.forEachOrdered(counter::addForward);
 
 		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
 		System.out.println((System.currentTimeMillis() - t)/1000 + "\t" + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
 		Model model = Model.standard(counter);
 		double prob = Reader.readLines(testFile)
 			.map(tokenizer::tokenize)
-			.flatMap(sequencer::sequence)
 			.map(vocabulary::toIndices)
+			.flatMap(sequencer::sequenceBackward)
 			.mapToDouble(model::model)
 			.map(x -> Math.log(x)/log2)
 			.average().orElse(0.0);

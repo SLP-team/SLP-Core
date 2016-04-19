@@ -3,8 +3,6 @@ package slp.core.modeling;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 
@@ -42,10 +40,9 @@ public class CacheModel implements Model {
 	}
 	
 	@Override
-	public double modelSequence(Stream<Integer> in) {
-		List<Integer> sequence = in.collect(Collectors.toList());
-		double prob = this.model.modelSequence(sequence.stream());
-		updateCache(sequence);
+	public double modelSequence(List<Integer> indices) {
+		double prob = this.model.modelSequence(indices);
+		updateCache(indices);
 		return prob;
 	}
 

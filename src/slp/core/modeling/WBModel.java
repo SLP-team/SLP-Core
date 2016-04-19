@@ -1,8 +1,6 @@
 package slp.core.modeling;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 
@@ -15,8 +13,7 @@ public class WBModel implements Model {
 	}
 	
 	@Override
-	public double modelSequence(Stream<Integer> in) {
-		List<Integer> indices = in.collect(Collectors.toList());
+	public double modelSequence(List<Integer> indices) {
 		int[][] counts = this.counter.getFullCounts(indices.stream());
 		double probability = 0.0;
 		double mass = 1.0;

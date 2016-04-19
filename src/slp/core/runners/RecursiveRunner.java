@@ -57,9 +57,9 @@ public class RecursiveRunner {
 	private void countFile(File file) {
 		Reader.readLines(file)
 			.map(this.tokenizer::tokenize)
-			.flatMap(this.sequencer::sequence)
 			.map(this.vocabulary::toIndices)
-			.forEachOrdered(this.counter::addBackwards);
+			.flatMap(this.sequencer::sequenceForward)
+			.forEachOrdered(this.counter::addForward);
 	}
 
 	public DoubleStream model(File directory) {
@@ -80,8 +80,8 @@ public class RecursiveRunner {
 		double log2 = Math.log(2);
 		return Reader.readLines(file)
 			.map(this.tokenizer::tokenize)
-			.flatMap(this.sequencer::sequence)
 			.map(this.vocabulary::toIndices)
+			.flatMap(this.sequencer::sequenceBackward)
 			.mapToDouble(this.model::model)
 			.map(x -> -Math.log(x)/log2);
 	}

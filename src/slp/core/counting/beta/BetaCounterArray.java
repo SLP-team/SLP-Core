@@ -31,45 +31,38 @@ public class BetaCounterArray extends BetaCounter {
 	}
 
 	@Override
-	public boolean update(List<Integer> indices, int index, boolean count) {
+	public boolean update(List<Integer> indices, int index, boolean count, boolean fast) {
 		// Cannot accommodate successors two steps ahead
 		if (index < indices.size()) {
 			Integer key = indices.get(index);
-			int successorIndex = getOrCreateSuccessorIndex(key);
+			int successorIndex = getOrCreateSuccessorIndex(key, index, indices.size());
 			// Out of capacity
 			if (successorIndex < 0) {
 				return false;
 			}
 			// Try to update the successor
 			BetaCounter successor = this.array[successorIndex];
-			boolean success = successor.update(indices, index + 1, count);
+			boolean success = successor.update(indices, index + 1, count, fast);
 			if (!success) {
 				BetaCounter newSuccessor = promote(key);
 				// cannot promote successor past Array
 				if (newSuccessor == null) return false;
 				this.array[successorIndex] = newSuccessor;
-				return update(indices, index, count);
+				return update(indices, index, count, fast);
 			}
 			// If a successor hits zero, remove it
 			if (successor.getCount() == 0) {
 				removeSuccessor(key);
 			}
 		}
-		else {
+		if (fast || index == indices.size()) {
 			this.updateCount(count);
-			this.updateNCounts(indices.size(), this.getCount(), count);
+			this.updateNCounts(index, this.getCount(), count);
 		}
 		return true;
 	}
-
-	@Override
-	protected BetaCounter getOrCreateSuccessor(Integer key) {
-		int successorIndex = getOrCreateSuccessorIndex(key);
-		if (successorIndex < 0) return null;
-		else return this.array[successorIndex];
-	}
 	
-	protected int getOrCreateSuccessorIndex(Integer key) {
+	protected int getOrCreateSuccessorIndex(Integer key, int currIndex, int sequenceLength) {
 		int nextIndex = getSuccessorIndex(key);
 		if (nextIndex >= 0) return nextIndex;
 		else {
@@ -80,29 +73,20 @@ public class BetaCounterArray extends BetaCounter {
 				if (nextIndex == NONE) return -1;
 			}
 			int index = -(nextIndex + 1);
-			BetaCounter value = new BetaCounterSingles();
+			BetaCounter value;
+			// If sequence is much longer, don't bother creating a Singles counter
+			if (index < sequenceLength - 2) {
+				value = new BetaCounterArray();
+			}
+			else {
+				value = new BetaCounterSingles();
+			}
 			this.indices[index] = key;
 			this.array[index] = value;
 			return index;
 		}
 	}
 
-	private int tryToGrow(Integer key) {
-		if (this.indices.length < MAX_SIZE) {
-			int length = this.indices.length;
-			int newLength = 4*length;
-			this.indices = Arrays.copyOf(indices, newLength);
-			this.array = Arrays.copyOf(array, newLength);
-			for (int i = length; i < this.indices.length; i++) {
-				this.indices[i] = NONE;
-			}
-			return -length - 1;
-		} else {
-			return NONE;
-		}
-	}
-
-	@Override
 	protected BetaCounter getSuccessor(Integer key) {
 		int index = getSuccessorIndex(key);
 		if (index < 0) return null;
@@ -119,6 +103,21 @@ public class BetaCounterArray extends BetaCounter {
 			}
 		}
 		return NONE;
+	}
+
+	private int tryToGrow(Integer key) {
+		if (this.indices.length < MAX_SIZE) {
+			int length = this.indices.length;
+			int newLength = 4*length;
+			this.indices = Arrays.copyOf(indices, newLength);
+			this.array = Arrays.copyOf(array, newLength);
+			for (int i = length; i < this.indices.length; i++) {
+				this.indices[i] = NONE;
+			}
+			return -length - 1;
+		} else {
+			return NONE;
+		}
 	}
 
 	private void removeSuccessor(Integer key) {

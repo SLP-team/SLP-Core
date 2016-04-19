@@ -28,23 +28,23 @@ public class BetaCounterMap extends BetaCounter {
 	}
 
 	@Override
-	public boolean update(List<Integer> indices, int index, boolean count) {
+	public boolean update(List<Integer> indices, int index, boolean count, boolean fast) {
 		if (index < indices.size()) {
 			Integer key = indices.get(index);
-			BetaCounter next = getOrCreateSuccessor(key);
-			boolean success = next.update(indices, index + 1, count);
+			BetaCounter next = getOrCreateSuccessor(key, index, indices.size());
+			boolean success = next.update(indices, index + 1, count, fast);
 			if (!success) {
 				// If can't update next, promote next and retry
 				next = promote(key);
-				return update(indices, index, count);
+				return update(indices, index, count, fast);
 			}
-			if (index == indices.size() - 1) {
+			if (fast || index == indices.size() - 1) {
 				updateMaps(next, key, count);
 			}
 		}
-		else {
+		if (fast || index == indices.size()) {
 			this.updateCount(count);
-			this.updateNCounts(indices.size(), this.getCount(), count);
+			this.updateNCounts(index, this.getCount(), count);
 		}
 		// Always successful
 		return true;
@@ -66,19 +66,23 @@ public class BetaCounterMap extends BetaCounter {
 		}
 	}
 
-	@Override
-	protected BetaCounter getOrCreateSuccessor(Integer index) {
-		// TODO: this is somewhat costly across many calls (~1 microsecond/invoc.).
-		BetaCounter next = getSuccessor(index);
+	protected BetaCounter getOrCreateSuccessor(Integer key, int currIndex, int sequenceLength) {
+		BetaCounter next = getSuccessor(key);
 		if (next != null) return next;
 		else {
-			BetaCounter value = new BetaCounterSingles();
-			this.successors.put(index, value);
+			BetaCounter value;
+			// If sequence is much longer, don't bother creating a Singles counter
+			if (currIndex < sequenceLength - 2) {
+				value = new BetaCounterArray();
+			}
+			else {
+				value = new BetaCounterSingles();
+			}
+			this.successors.put(key, value);
 			return value;
 		}
 	}
 
-	@Override
 	protected BetaCounter getSuccessor(Integer index) {
 		return this.successors.get(index);
 	}
