@@ -70,14 +70,7 @@ public class BetaCounterMap extends BetaCounter {
 		BetaCounter next = getSuccessor(key);
 		if (next != null) return next;
 		else {
-			BetaCounter value;
-			// If sequence is much longer, don't bother creating a Singles counter
-			if (currIndex < sequenceLength - 2) {
-				value = new BetaCounterArray();
-			}
-			else {
-				value = new BetaCounterSingles();
-			}
+			BetaCounter value = new BetaCounterSingle();
 			this.successors.put(key, value);
 			return value;
 		}
@@ -129,38 +122,26 @@ public class BetaCounterMap extends BetaCounter {
 		}
 	}
 
+	/*
+	 * A map promotes successors from Single to Array to Map
+	 */
 	private BetaCounter promote(Integer key) {
 		BetaCounter curr = this.successors.get(key);
-		if (curr instanceof BetaCounterSingles) {
-			return promoteSinglesToArray(key, (BetaCounterSingles) curr);
+		if (curr instanceof BetaCounterSingle) {
+			return promoteSingleToSmall(key, (BetaCounterSingle) curr);
+		} else if (curr instanceof BetaCounterSmall) {
+			return promoteSmallToArray(key, (BetaCounterSmall) curr);
 		} else if (curr instanceof BetaCounterArray) {
 			return promoteArrToMap(key, (BetaCounterArray) curr);
 		}
 		return curr;
 	}
 
-	private BetaCounter promoteSinglesToArray(Integer key, BetaCounterSingles curr) {
-		BetaCounterArray newNext = new BetaCounterArray();
+	private BetaCounter promoteSingleToSmall(Integer key, BetaCounterSingle curr) {
+		BetaCounterSmall newNext = new BetaCounterSmall();
 		newNext.count = curr.count;
-		// Transfer old counter values into new counter
-		if (curr.successor1Index > BetaCounterSingles.NONE) {
-			BetaCounterSingles next1 = new BetaCounterSingles();
-			next1.count = curr.successor1Count;
-			newNext.indices[0] = curr.successor1Index;
-			newNext.array[0] = next1;
-			if (curr.successor2Index > BetaCounterSingles.NONE) {
-				BetaCounterSingles next2 = new BetaCounterSingles();
-				next2.count = curr.successor2Count;
-				newNext.indices[1] = curr.successor2Index;
-				newNext.array[1] = next2;
-				if (curr.successor2Index > BetaCounterSingles.NONE) {
-					BetaCounterSingles next3 = new BetaCounterSingles();
-					next3.count = curr.successor3Count;
-					newNext.indices[2] = curr.successor3Index;
-					newNext.array[2] = next3;
-				}
-			}
-		}
+		newNext.successor1 = curr.successor1;
+		newNext.successor1Index = curr.successor1Index;
 		this.successors.put(key, newNext);
 		if (newNext.count > 0) {
 			this.countsMap.remove(newNext.count, curr);
@@ -169,27 +150,22 @@ public class BetaCounterMap extends BetaCounter {
 		return newNext;
 	}
 
-	@SuppressWarnings("unused")
-	private BetaCounter promoteSinglesToMap(Integer key, BetaCounterSingles curr) {
-		BetaCounterMap newNext = new BetaCounterMap();
-		newNext.count = curr.getCount();
+	private BetaCounter promoteSmallToArray(Integer key, BetaCounterSmall curr) {
+		BetaCounterArray newNext = new BetaCounterArray();
+		newNext.count = curr.count;
 		// Transfer old counter values into new counter
-		if (curr.successor1Index > BetaCounterSingles.NONE) {
-			BetaCounterSingles next1 = new BetaCounterSingles();
-			next1.count = curr.successor1Count;
-			newNext.successors.put(curr.successor1Index, next1);
-			if (curr.successor2Index > BetaCounterSingles.NONE) {
-				BetaCounterSingles next2 = new BetaCounterSingles();
-				next2.count = curr.successor2Count;
-				newNext.successors.put(curr.successor2Index, next2);
-				if (curr.successor2Index > BetaCounterSingles.NONE) {
-					BetaCounterSingles next3 = new BetaCounterSingles();
-					next3.count = curr.successor3Count;
-					newNext.successors.put(curr.successor3Index, next3);
+		if (curr.successor1Index != BetaCounterSmall.NONE) {
+			newNext.indices[0] = curr.successor1Index;
+			newNext.array[0] = curr.successor1;
+			if (curr.successor2Index != BetaCounterSmall.NONE) {
+				newNext.indices[1] = curr.successor2Index;
+				newNext.array[1] = curr.successor2;
+				if (curr.successor3Index != BetaCounterSmall.NONE) {
+					newNext.indices[2] = curr.successor3Index;
+					newNext.array[2] = curr.successor3;
 				}
 			}
 		}
-		// Update maps
 		this.successors.put(key, newNext);
 		if (newNext.count > 0) {
 			this.countsMap.remove(newNext.count, curr);
@@ -209,6 +185,68 @@ public class BetaCounterMap extends BetaCounter {
 		}
 		curr.array = null;
 		curr.indices = null;
+		this.successors.put(key, newNext);
+		if (newNext.count > 0) {
+			this.countsMap.remove(newNext.count, curr);
+			this.countsMap.put(newNext.count, newNext);
+		}
+		return newNext;
+	}
+
+	/*
+	 * "Fast-track" method, experimentally doesn't seem successful.
+	 */
+	@SuppressWarnings("unused")
+	private BetaCounter promoteSingleToArray(Integer key, BetaCounterSingle curr) {
+		BetaCounterArray newNext = new BetaCounterArray();
+		newNext.count = curr.count;
+		// Transfer old counter values into new counter
+		if (curr.successor1Index != BetaCounterSingle.NONE) {
+			newNext.indices[0] = curr.successor1Index;
+			newNext.array[0] = curr.successor1;
+		}
+		this.successors.put(key, newNext);
+		if (newNext.count > 0) {
+			this.countsMap.remove(newNext.count, curr);
+			this.countsMap.put(newNext.count, newNext);
+		}
+		return newNext;
+	}
+
+	/*
+	 * "Fast-track" method, experimentally doesn't seem successful.
+	 */
+	@SuppressWarnings("unused")
+	private BetaCounter promoteSingleToMap(Integer key, BetaCounterSingle curr) {
+		BetaCounterMap newNext = new BetaCounterMap();
+		newNext.count = curr.count;
+		if (curr.successor1Index != BetaCounterSingle.NONE) {
+			newNext.successors.put(curr.successor1Index, curr.successor1);
+		}
+		this.successors.put(key, newNext);
+		if (newNext.count > 0) {
+			this.countsMap.remove(newNext.count, curr);
+			this.countsMap.put(newNext.count, newNext);
+		}
+		return newNext;
+	}
+
+	/*
+	 * "Fast-track" method, experimentally doesn't seem successful.
+	 */
+	@SuppressWarnings("unused")
+	private BetaCounter promoteSmallToMap(Integer key, BetaCounterSmall curr) {
+		BetaCounterMap newNext = new BetaCounterMap();
+		newNext.count = curr.count;
+		if (curr.successor1Index != BetaCounterSingle.NONE) {
+			newNext.successors.put(curr.successor1Index, curr.successor1);
+			if (curr.successor2Index != BetaCounterSingle.NONE) {
+				newNext.successors.put(curr.successor2Index, curr.successor2);
+				if (curr.successor3Index != BetaCounterSingle.NONE) {
+					newNext.successors.put(curr.successor3Index, curr.successor3);
+				}
+			}
+		}
 		this.successors.put(key, newNext);
 		if (newNext.count > 0) {
 			this.countsMap.remove(newNext.count, curr);

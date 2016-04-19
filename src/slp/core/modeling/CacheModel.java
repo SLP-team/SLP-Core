@@ -50,11 +50,11 @@ public class CacheModel implements Model {
 		this.cache.addLast(sequence);
 		if (this.cache.size() > this.capacity) {
 			List<Integer> removed = this.cache.removeFirst();
-			this.counter.remove(removed.stream());
+			this.counter.removeBackward(removed);
 		}
 		// Defer counting the just-modeled sequence to avoid adding a seen context for an unseen new event
 		if (this.cache.size() > 1) {
-			this.counter.add(this.cache.getFirst().stream());
+			this.counter.addBackward(this.cache.getFirst());
 		}
 	}
 

@@ -19,7 +19,7 @@ public class Vocabulary implements Externalizable {
 	public static int size;
 	
 	public Vocabulary() {
-		this.wordIndices = HashBiMap.create();
+		this.wordIndices = HashBiMap.create(20000);
 	}
 	
 	public static Vocabulary create() {

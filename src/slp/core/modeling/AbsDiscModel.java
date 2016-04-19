@@ -14,7 +14,7 @@ public class AbsDiscModel implements Model {
 	
 	@Override
 	public double modelSequence(List<Integer> indices) {
-		int[][] counts = this.counter.getFullCounts(indices.stream());
+		int[][] counts = this.counter.getFullCounts(indices);
 		double probability = 0.0;
 		double mass = 1.0;
 		// say [a, b, c, d], i ranges from 3 to 0 incl.
@@ -28,7 +28,7 @@ public class AbsDiscModel implements Model {
 			int n1 = this.counter.getNCount(i + 1, 1);
 			int n2 = this.counter.getNCount(i + 1, 2);
 			double D = (double) n1 / ((double) n1 + 2*n2);
-			int[] distinctContext = this.counter.getDistinctCounts(1, indices.subList(indices.size() - i - 1, indices.size() - 1).stream());
+			int[] distinctContext = this.counter.getDistinctCounts(1, indices.subList(indices.size() - i - 1, indices.size() - 1));
 			int N1Plus = distinctContext[0];
 			
 			// Probability calculation

@@ -32,6 +32,7 @@ public interface Model {
 	default void optionalSanityCheck(List<Integer> indices) {
 		int old = indices.get(indices.size() - 1);
 		double sum = 0.0;
+		// TODO: hard-coded
 		for (int i = 0; i < Vocabulary.size; i++) {
 			indices.set(indices.size() - 1, i);
 			double prob = this.modelSequence(indices);
@@ -44,6 +45,6 @@ public interface Model {
 	}
 
 	public static Model standard(Counter counter) {
-		return new JMModel(counter);
+		return new AbsDiscModel(counter);
 	}
 }

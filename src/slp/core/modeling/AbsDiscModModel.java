@@ -14,7 +14,7 @@ public class AbsDiscModModel implements Model {
 	
 	@Override
 	public double modelSequence(List<Integer> indices) {
-		int[][] counts = this.counter.getFullCounts(indices.stream());
+		int[][] counts = this.counter.getFullCounts(indices);
 		double probability = 0.0;
 		double mass = 1.0;
 		// say [a, b, c, d], i ranges from 3 to 0 incl.
@@ -35,7 +35,7 @@ public class AbsDiscModModel implements Model {
 				2 - 3*Y*n3/n2,
 				3 - 4*Y*n4/n3
 			};
-			int[] Ns = this.counter.getDistinctCounts(3, indices.subList(indices.size() - i - 1, indices.size() - 1).stream());
+			int[] Ns = this.counter.getDistinctCounts(3, indices.subList(indices.size() - i - 1, indices.size() - 1));
 			
 			// Probability calculation
 			double discount = count > 0 ? Ds[Math.min(count, Ds.length) - 1] : 0.0;

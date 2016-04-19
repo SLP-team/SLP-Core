@@ -9,7 +9,7 @@ import java.util.List;
 public class BetaCounterArray extends BetaCounter {
 
 	public static final int NONE = (int) -1E10;
-	private static final int INIT_SIZE = 4;
+	private static final int INIT_SIZE = 16;
 	private static final int MAX_SIZE = 64*INIT_SIZE;
 	
 	protected int[] indices;
@@ -34,6 +34,8 @@ public class BetaCounterArray extends BetaCounter {
 	public boolean update(List<Integer> indices, int index, boolean count, boolean fast) {
 		// Cannot accommodate successors two steps ahead
 		if (index < indices.size()) {
+			// Reset cache
+			this.distinctCache = null;
 			Integer key = indices.get(index);
 			int successorIndex = getOrCreateSuccessorIndex(key, index, indices.size());
 			// Out of capacity
@@ -73,14 +75,7 @@ public class BetaCounterArray extends BetaCounter {
 				if (nextIndex == NONE) return -1;
 			}
 			int index = -(nextIndex + 1);
-			BetaCounter value;
-			// If sequence is much longer, don't bother creating a Singles counter
-			if (index < sequenceLength - 2) {
-				value = new BetaCounterArray();
-			}
-			else {
-				value = new BetaCounterSingles();
-			}
+			BetaCounter value = new BetaCounterSingle();
 			this.indices[index] = key;
 			this.array[index] = value;
 			return index;
@@ -153,6 +148,7 @@ public class BetaCounterArray extends BetaCounter {
 		}
 	}
 
+	private int[] distinctCache = null;
 	@Override
 	protected int[] getDistinctCounts(int range, List<Integer> sequence, int index) {
 		if (index < sequence.size()) {
@@ -165,49 +161,73 @@ public class BetaCounterArray extends BetaCounter {
 				return new int[range];
 			}
 		} else {
+			// Use cache for faster lookup (large arrays are slow). Cache is reset on any update
+			if (this.distinctCache != null && this.distinctCache.length == range) return this.distinctCache;
 			int[] distinctCounts = new int[range];
 			for (int i = 0; i < this.array.length; i++) {
 				if (this.array[i] == null) break;
 				int count = this.array[i].getCount();
-				if (count > range) count = range;
-				distinctCounts[count - 1]++;
+				distinctCounts[Math.min(range, count) - 1]++;
 			}
+			this.distinctCache = distinctCounts;
 			return distinctCounts;
 		}
 	}
 
+	/*
+	 * An array promotes successors from Single to Small to Array
+	 */
 	private BetaCounter promote(Integer key) {
 		BetaCounter curr = getSuccessor(key);
-		if (curr instanceof BetaCounterSingles) {
-			return promoteSinglesToArray(key, (BetaCounterSingles) curr);
+		if (curr instanceof BetaCounterSingle) {
+			return promoteSingleToSmall(key, (BetaCounterSingle) curr);
+		} else if (curr instanceof BetaCounterSmall) {
+			return promoteSmallToArray(key, (BetaCounterSmall) curr);
 		} else if (curr instanceof BetaCounterArray) {
 			return null;
 		}
 		return curr;
 	}
-	
-	private BetaCounter promoteSinglesToArray(Integer key, BetaCounterSingles curr) {
+
+	private BetaCounter promoteSmallToArray(Integer key, BetaCounterSmall curr) {
 		BetaCounterArray newNext = new BetaCounterArray();
 		newNext.count = curr.count;
 		// Transfer old counter values into new counter
-		if (curr.successor1Index > BetaCounterSingles.NONE) {
-			BetaCounterSingles next1 = new BetaCounterSingles();
-			next1.count = curr.successor1Count;
+		if (curr.successor1Index != BetaCounterSmall.NONE) {
 			newNext.indices[0] = curr.successor1Index;
-			newNext.array[0] = next1;
-			if (curr.successor2Index > BetaCounterSingles.NONE) {
-				BetaCounterSingles next2 = new BetaCounterSingles();
-				next2.count = curr.successor2Count;
+			newNext.array[0] = curr.successor1;
+			if (curr.successor2Index != BetaCounterSmall.NONE) {
 				newNext.indices[1] = curr.successor2Index;
-				newNext.array[1] = next2;
-				if (curr.successor2Index > BetaCounterSingles.NONE) {
-					BetaCounterSingles next3 = new BetaCounterSingles();
-					next3.count = curr.successor3Count;
+				newNext.array[1] = curr.successor2;
+				if (curr.successor3Index != BetaCounterSmall.NONE) {
 					newNext.indices[2] = curr.successor3Index;
-					newNext.array[2] = next3;
+					newNext.array[2] = curr.successor3;
 				}
 			}
 		}
+		return newNext;
+	}
+
+	/*
+	 * "Fast-track" method
+	 */
+	@SuppressWarnings("unused")
+	private BetaCounter promoteSingleToArray(Integer key, BetaCounterSingle curr) {
+		BetaCounterArray newNext = new BetaCounterArray();
+		newNext.count = curr.count;
+		// Transfer old counter values into new counter
+		if (curr.successor1Index != BetaCounterSingle.NONE) {
+			newNext.indices[0] = curr.successor1Index;
+			newNext.array[0] = curr.successor1;
+		}
+		return newNext;
+	}
+
+	private BetaCounter promoteSingleToSmall(Integer key, BetaCounterSingle curr) {
+		BetaCounterSmall newNext = new BetaCounterSmall();
+		newNext.count = curr.count;
+		newNext.successor1 = curr.successor1;
+		newNext.successor1Index = curr.successor1Index;
 		return newNext;
 	}
 

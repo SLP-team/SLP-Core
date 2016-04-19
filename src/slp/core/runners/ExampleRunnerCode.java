@@ -23,15 +23,16 @@ public class ExampleRunnerCode {
 		
 		long t = System.currentTimeMillis();
 		Reader.readLines(trainFile)
+			.map(x -> "<s> " + x + " </s>")
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
 			.flatMap(sequencer::sequenceForward)
 			.forEachOrdered(counter::addForward);
-
 		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
 		System.out.println((System.currentTimeMillis() - t)/1000 + "\t" + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
 		Model model = Model.standard(counter);
 		double prob = Reader.readLines(testFile)
+			.map(x -> "<s> " + x + " </s>")
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
 			.flatMap(sequencer::sequenceBackward)

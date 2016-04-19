@@ -1,0 +1,108 @@
+package slp.core.counting.beta;
+
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.List;
+
+public class BetaCounterSingle extends BetaCounter {
+
+	public static final int NONE = (int) -1E10;
+	protected BetaCounter successor1;
+	protected int successor1Index = NONE;
+	
+	public BetaCounterSingle() {
+		super();
+	}
+	
+	@Override
+	public int getDistinctSuccessors() {
+		return this.successor1Index == NONE ? 0 : 1;
+	}
+
+	@Override
+	public boolean update(List<Integer> indices, int index, boolean count, boolean fast) {
+		// Cannot accommodate successors two steps ahead
+		if (index < indices.size()) {
+			Integer key = indices.get(index);
+			if (this.successor1Index == NONE) {
+				this.successor1Index = key;
+				this.successor1 = new BetaCounterSingle();
+				this.successor1.update(indices, index + 1, count, fast);
+			}
+			else if (this.successor1Index == key) {
+				boolean success = this.successor1.update(indices, index + 1, count, fast);
+				if (!success) return false;
+				if (this.successor1.count == 0) {
+					this.successor1 = null;
+				}
+			}
+			else {
+				return false;
+			}
+		}
+		if (fast || index == indices.size()) {
+			this.updateCount(count);
+			this.updateNCounts(index, this.getCount(), count);
+		}
+		return true;
+	}
+	
+	@Override
+	protected int[] getShortCounts(List<Integer> sequence, int index) {
+		int[] counts = new int[2];
+		Integer key = sequence.get(index);
+		BetaCounter successor = getSuccessor(key);
+		if (index == sequence.size() - 1) {
+			counts[1] = this.count;
+			if (successor != null) counts[0] = successor.getCount();
+			return counts;
+		}
+		else if (successor != null) {
+			return successor.getShortCounts(sequence, index + 1);
+		}
+		else {
+			return counts;
+		}
+	}
+	
+	@Override
+	protected int[] getDistinctCounts(int range, List<Integer> sequence, int index) {
+		if (index < sequence.size()) {
+			Integer next = sequence.get(index);
+			BetaCounter successor = getSuccessor(next);
+			if (successor != null) {
+				return successor.getDistinctCounts(range, sequence, index + 1);
+			}
+			else {
+				return new int[range];
+			}
+		}
+		else {
+			int[] distinctCounts = new int[range];
+			if (this.successor1Index != NONE) {
+				distinctCounts[Math.min(range, this.successor1.getCount()) - 1]++;
+			}
+			return distinctCounts;
+		}
+	}
+
+	private BetaCounter getSuccessor(Integer key) {
+		if (this.successor1Index == NONE) {
+			return null;
+		}
+		else if (this.successor1Index == key) {
+			return this.successor1;
+		}
+		return null;
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+	}
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+	}
+
+}

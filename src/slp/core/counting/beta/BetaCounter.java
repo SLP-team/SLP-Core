@@ -1,8 +1,6 @@
 package slp.core.counting.beta;
 
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.util.Configuration;
@@ -61,15 +59,15 @@ public abstract class BetaCounter implements Counter {
 	public abstract boolean update(List<Integer> indices, int index, boolean count, boolean fast);
 	
 	@Override
-	public int[] getShortCounts(Stream<Integer> indices) {
-		return getShortCounts(indices.collect(Collectors.toList()), 0);
+	public int[] getShortCounts(List<Integer> indices) {
+		return getShortCounts(indices, 0);
 	}
 
 	protected abstract int[] getShortCounts(List<Integer> sequence, int index);
 
 	@Override
-	public int[] getDistinctCounts(int range, Stream<Integer> indices) {
-		return getDistinctCounts(range, indices.collect(Collectors.toList()), 0);
+	public int[] getDistinctCounts(int range, List<Integer> indices) {
+		return getDistinctCounts(range, indices, 0);
 	}
 	
 	protected abstract int[] getDistinctCounts(int range, List<Integer> sequence, int index);

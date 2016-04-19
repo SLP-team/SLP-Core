@@ -14,7 +14,7 @@ public class KNModel implements Model {
 	
 	@Override
 	public double modelSequence(List<Integer> indices) {
-		int[][] counts = this.counter.getFullCounts(indices.stream());
+		int[][] counts = this.counter.getFullCounts(indices);
 		double probability = 0.0;
 		double mass = 1.0;
 		// say [a, b, c, d], i ranges from 3 to 0 incl. 

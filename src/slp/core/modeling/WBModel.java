@@ -14,7 +14,7 @@ public class WBModel implements Model {
 	
 	@Override
 	public double modelSequence(List<Integer> indices) {
-		int[][] counts = this.counter.getFullCounts(indices.stream());
+		int[][] counts = this.counter.getFullCounts(indices);
 		double probability = 0.0;
 		double mass = 1.0;
 		// say [a], counts will be [c(a), c(*)], i is just 0
@@ -25,7 +25,7 @@ public class WBModel implements Model {
 			if (contextCount == 0) continue;
 			
 			// Parameters for discount weight
-			int[] distinctContext = this.counter.getDistinctCounts(1, indices.subList(indices.size() - i - 1, indices.size() - 1).stream());
+			int[] distinctContext = this.counter.getDistinctCounts(1, indices.subList(indices.size() - i - 1, indices.size() - 1));
 			int N1Plus = distinctContext[0];
 			
 			// Probability calculation
