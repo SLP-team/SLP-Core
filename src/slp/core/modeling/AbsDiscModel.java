@@ -3,6 +3,7 @@ package slp.core.modeling;
 import java.util.List;
 
 import slp.core.counting.Counter;
+import slp.core.counting.Vocabulary;
 
 public class AbsDiscModel implements Model {
 
@@ -37,7 +38,7 @@ public class AbsDiscModel implements Model {
 			probability += mass * MLE;
 			mass *= (1 - lambda);
 		}
-		probability += mass / this.counter.getDistinctSuccessors();
+		probability += mass / Vocabulary.size;
 		return probability;
 	}
 

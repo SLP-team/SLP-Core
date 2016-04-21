@@ -34,6 +34,7 @@ public class BetaCounterSingle extends BetaCounter {
 				boolean success = this.successor1.update(indices, index + 1, count, fast);
 				if (!success) return false;
 				if (this.successor1.count == 0) {
+					this.successor1Index = NONE;
 					this.successor1 = null;
 				}
 			}

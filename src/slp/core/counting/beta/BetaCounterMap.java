@@ -4,22 +4,25 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Multimap;
+import java.util.Set;
 
 public class BetaCounterMap extends BetaCounter {
 
-	private static final int COUNT_OF_COUNTS_CUTOFF = 5;
+	private static final int COUNT_OF_COUNTS_CUTOFF = 10;
 	private Map<Integer, BetaCounter> successors;
-	private Multimap<Integer, BetaCounter> countsMap;
+	private Set<BetaCounter>[] countsArray;
 
+	@SuppressWarnings("unchecked")
 	public BetaCounterMap() {
 		super();
 		this.successors = new HashMap<Integer, BetaCounter>();
-		this.countsMap = HashMultimap.create();
+		this.countsArray = new Set[COUNT_OF_COUNTS_CUTOFF];
+		for (int i = 0; i < this.countsArray.length; i++) {
+			this.countsArray[i] = new HashSet<BetaCounter>();
+		}
 	}
 	
 	@Override
@@ -53,16 +56,14 @@ public class BetaCounterMap extends BetaCounter {
 	private void updateMaps(BetaCounter successor, Integer index, boolean added) {
 		// Update new count stats
 		int count = successor.getCount();
+		int currIndex = Math.min(count, COUNT_OF_COUNTS_CUTOFF) - 1;
+		int prevIndex = Math.min(count + (added ? -1 : 1), COUNT_OF_COUNTS_CUTOFF) - 1;
+		if (currIndex != prevIndex) {
+			if (prevIndex >= 0) this.countsArray[prevIndex].remove(successor);
+			if (currIndex >= 0) this.countsArray[currIndex].add(successor);
+		}
 		if (count == 0) {
 			this.successors.remove(index);
-			// If old > 0, remove its count
-			if (!added) {
-				this.countsMap.remove(count + 1, successor);
-			}
-		}
-		else if (count < COUNT_OF_COUNTS_CUTOFF || (added && count == COUNT_OF_COUNTS_CUTOFF)) {
-			this.countsMap.remove(count + (added ? -1 : 1), successor);
-			this.countsMap.put(count, successor);
 		}
 	}
 
@@ -111,13 +112,13 @@ public class BetaCounterMap extends BetaCounter {
 			}
 		} else {
 			int[] distinctCounts = new int[range];
-			int otherCounts = this.countsMap.size();
+			int totalCounts = this.successors.size();
 			for (int i = 1; i < range; i++) {
-				int countI = this.countsMap.get(i).size();
-				distinctCounts[i - 1] = countI;
-				otherCounts -= countI;
+				int countOfCountsI = this.countsArray[i - 1].size();
+				distinctCounts[i - 1] = countOfCountsI;
+				totalCounts -= countOfCountsI;
 			}
-			distinctCounts[range - 1] = otherCounts;
+			distinctCounts[range - 1] = totalCounts;
 			return distinctCounts;
 		}
 	}
@@ -142,11 +143,7 @@ public class BetaCounterMap extends BetaCounter {
 		newNext.count = curr.count;
 		newNext.successor1 = curr.successor1;
 		newNext.successor1Index = curr.successor1Index;
-		this.successors.put(key, newNext);
-		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
-		}
+		updateMapsAfterPromotion(key, curr, newNext);
 		return newNext;
 	}
 
@@ -166,11 +163,7 @@ public class BetaCounterMap extends BetaCounter {
 				}
 			}
 		}
-		this.successors.put(key, newNext);
-		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
-		}
+		updateMapsAfterPromotion(key, curr, newNext);
 		return newNext;
 	}
 
@@ -182,14 +175,11 @@ public class BetaCounterMap extends BetaCounter {
 			if (index == BetaCounterArray.NONE) break;
 			BetaCounter successor = curr.array[i];
 			newNext.successors.put(index, successor);
+			newNext.countsArray[Math.min(COUNT_OF_COUNTS_CUTOFF, successor.count) - 1].add(successor);
 		}
 		curr.array = null;
 		curr.indices = null;
-		this.successors.put(key, newNext);
-		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
-		}
+		updateMapsAfterPromotion(key, curr, newNext);
 		return newNext;
 	}
 
@@ -205,11 +195,7 @@ public class BetaCounterMap extends BetaCounter {
 			newNext.indices[0] = curr.successor1Index;
 			newNext.array[0] = curr.successor1;
 		}
-		this.successors.put(key, newNext);
-		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
-		}
+		updateMapsAfterPromotion(key, curr, newNext);
 		return newNext;
 	}
 
@@ -223,11 +209,7 @@ public class BetaCounterMap extends BetaCounter {
 		if (curr.successor1Index != BetaCounterSingle.NONE) {
 			newNext.successors.put(curr.successor1Index, curr.successor1);
 		}
-		this.successors.put(key, newNext);
-		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
-		}
+		updateMapsAfterPromotion(key, curr, newNext);
 		return newNext;
 	}
 
@@ -247,12 +229,17 @@ public class BetaCounterMap extends BetaCounter {
 				}
 			}
 		}
+		updateMapsAfterPromotion(key, curr, newNext);
+		return newNext;
+	}
+
+	private void updateMapsAfterPromotion(Integer key, BetaCounter curr, BetaCounter newNext) {
 		this.successors.put(key, newNext);
 		if (newNext.count > 0) {
-			this.countsMap.remove(newNext.count, curr);
-			this.countsMap.put(newNext.count, newNext);
+			int index = Math.min(newNext.count, COUNT_OF_COUNTS_CUTOFF) - 1;
+			this.countsArray[index].remove(curr);
+			this.countsArray[index].add(newNext);
 		}
-		return newNext;
 	}
 
 	@Override

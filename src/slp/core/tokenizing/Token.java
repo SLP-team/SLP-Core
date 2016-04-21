@@ -1,7 +1,11 @@
 package slp.core.tokenizing;
 
-public class Token {
+import java.io.Serializable;
+
+public class Token implements Serializable {
 	
+	private static final long serialVersionUID = 2836909126359379086L;
+
 	private final String text;
 	
 	public Token(String text) {

@@ -3,6 +3,7 @@ package slp.core.modeling;
 import java.util.List;
 
 import slp.core.counting.Counter;
+import slp.core.counting.Vocabulary;
 
 public class KNModel implements Model {
 
@@ -21,7 +22,7 @@ public class KNModel implements Model {
 		for (int i = counts[0].length - 1; i >= 0; i--) {
 			
 		}
-		probability += mass / this.counter.getDistinctSuccessors();
+		probability += mass / Vocabulary.size;
 		return probability;
 
 	}

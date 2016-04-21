@@ -23,16 +23,17 @@ public class ExampleRunnerNL {
 	public static long times[] = {0, 0, 0, 0, 0, 0};
 	
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
+		String root = (args.length > 0 ? args[0] : "E:/LMCorpus/");
 		Vocabulary vocabulary = new Vocabulary();
 		Counter counter = Counter.standard();
 		Model model = Model.standard(counter);
-		for (int i = 1; i <= 5; i++) {
+		for (int i = 1; i <= 99; i++) {
 			System.out.print(i + "\n");
 			times[0] -= System.currentTimeMillis();
-			train(vocabulary, counter, new File("E:/LMCorpus/train2/" + (i < 10 ? "0" : "") + i));
+			train(vocabulary, counter, new File(root + "train/" + (i < 10 ? "0" : "") + i));
 			times[0] += System.currentTimeMillis();
 			System.out.println(Arrays.toString(times));
-			double entropy = test(vocabulary, model, new File("E:/LMCorpus/test2/00"));
+			double entropy = test(vocabulary, model, new File(root + "test/00"));
 			System.out.println(entropy);
 		}
 		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());

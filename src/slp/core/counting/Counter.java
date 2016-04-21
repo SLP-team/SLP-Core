@@ -80,7 +80,7 @@ public interface Counter extends Externalizable {
 	public default void updateForward(List<Integer> indices, boolean count) {
 		for (int i = 0; i < indices.size(); i++) {
 			update(indices.subList(0, i + 1), count);
-		}
+		}	
 	}
 
 	public default void addForward(List<Integer> indices) {

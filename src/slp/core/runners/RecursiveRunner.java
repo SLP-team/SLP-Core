@@ -2,7 +2,9 @@ package slp.core.runners;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.Vocabulary;
@@ -12,16 +14,13 @@ import slp.core.tokenizing.Tokenizer;
 import slp.core.util.Reader;
 
 public class RecursiveRunner {
-	
+
+	private static File trainDir = new File("../java2/fulldirs/ant/org/apache");
+	private static File testDir = new File("../java2/fulldirs/ant/org/apache");
 	public static void main(String[] args) throws IOException {
-		File trainDir = new File("../java2/fulldirs/batik");
-		File testDir = new File("../java2/fulldirs/ant");
 		RecursiveRunner runner = new RecursiveRunner();
-		runner.count(trainDir);
-		System.out.println(runner.counter.getCount() + "\t" + runner.counter.getDistinctSuccessors());
-		double entropy = runner.model(testDir)
-			.average().orElse(0.0);
-		System.out.println(entropy);
+		runner.count(trainDir, true);
+		System.out.println(runner.model(testDir).average().orElse(0.0));
 	}
 	
 	private final Tokenizer tokenizer;
@@ -38,51 +37,43 @@ public class RecursiveRunner {
 		this.model = Model.standard(this.counter);
 	}
 
-	public void count(File directory) {
-		for (String child : directory.list()) {
-			if (directory.getName().equals("fulldirs"))
-				System.out.println(child);
-			File file = new File(directory, child);
-			if (file.isDirectory()) {
-				count(file);
+	public void count(File file, boolean add) {
+		if (file.getName().contains(".") || !file.isDirectory()) {
+			Stream<List<Integer>> sequences = Reader.readLines(file)
+				.map(x -> "<s> " + x + " </s>")
+				.map(this.tokenizer::tokenize)
+				.map(this.vocabulary::toIndices)
+				.flatMap(this.sequencer::sequenceForward);
+			if (add) sequences.forEachOrdered(this.counter::addForward);
+			else sequences.forEachOrdered(this.counter::removeForward);
+		}
+		else {
+			for (String child : file.list()) {
+				File childFile = new File(file, child);
+				count(childFile, add);
 			}
-			else {
-				countFile(file);
-			}
-			if (directory.getName().equals("fulldirs"))
-				System.out.println(this.counter.getCount());
 		}
 	}
 
-	private void countFile(File file) {
-		Reader.readLines(file)
-			.map(this.tokenizer::tokenize)
-			.map(this.vocabulary::toIndices)
-			.flatMap(this.sequencer::sequenceForward)
-			.forEachOrdered(this.counter::addForward);
-	}
-
-	public DoubleStream model(File directory) {
+	private static final double log2 = Math.log(2);
+	public DoubleStream model(File file) {
 		DoubleStream entropies = DoubleStream.empty();
-		for (String child : directory.list()) {
-			File file = new File(directory, child);
-			if (file.isDirectory()) {
-				entropies = DoubleStream.concat(entropies, model(file));
-			}
-			else {
-				entropies = DoubleStream.concat(entropies, modelFile(file));
+		if (file.getName().contains(".") || !file.isDirectory()) {
+			DoubleStream fileEntropies = Reader.readLines(file)
+				.map(x -> "<s> " + x + " </s>")
+				.map(this.tokenizer::tokenize)
+				.map(this.vocabulary::toIndices)
+				.flatMap(this.sequencer::sequenceBackward)
+				.mapToDouble(this.model::model)
+				.map(x -> -Math.log(x)/log2);
+			entropies = DoubleStream.concat(entropies, fileEntropies);
+		}
+		else {
+			for (String child : file.list()) {
+				File childFile = new File(file, child);
+				entropies = DoubleStream.concat(entropies, model(childFile));
 			}
 		}
 		return entropies;
-	}
-
-	private DoubleStream modelFile(File file) {
-		double log2 = Math.log(2);
-		return Reader.readLines(file)
-			.map(this.tokenizer::tokenize)
-			.map(this.vocabulary::toIndices)
-			.flatMap(this.sequencer::sequenceBackward)
-			.mapToDouble(this.model::model)
-			.map(x -> -Math.log(x)/log2);
 	}
 }

@@ -3,6 +3,7 @@ package slp.core.modeling;
 import java.util.List;
 
 import slp.core.counting.Counter;
+import slp.core.counting.Vocabulary;
 
 public class JMModel implements Model {
 
@@ -31,10 +32,11 @@ public class JMModel implements Model {
 			
 			// Probability calculation
 			double MLE = count / (double) contextCount;
-			probability += mass * this.LAMBDA * MLE;
-			mass *= (1 - this.LAMBDA);
+			double lambda = this.LAMBDA;
+			probability += mass * lambda * MLE;
+			mass *= (1 - lambda);
 		}
-		probability += mass / this.counter.getDistinctSuccessors();
+		probability += mass / Vocabulary.size;
 		return probability;
 	}
 

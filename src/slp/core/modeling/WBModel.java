@@ -3,6 +3,7 @@ package slp.core.modeling;
 import java.util.List;
 
 import slp.core.counting.Counter;
+import slp.core.counting.Vocabulary;
 
 public class WBModel implements Model {
 
@@ -34,7 +35,7 @@ public class WBModel implements Model {
 			probability += mass * lambda * MLE;
 			mass *= (1 - lambda);
 		}
-		probability += mass / this.counter.getDistinctSuccessors();
+		probability += mass / Vocabulary.size;
 		return probability;
 	}
 
