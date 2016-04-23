@@ -9,8 +9,8 @@ import slp.core.util.Pair;
 public interface Model {
 	
 	public default double model(List<Integer> in) {
-		// Very rare (one in a million) "sanity check"
-		if (Math.random() < 10E-6) {
+		// Very rare (one in ten million) "sanity check"
+		if (Math.random() < 10E-7) {
 			optionalSanityCheck(in);
 		}
 		return this.modelSequence(in);
@@ -32,7 +32,6 @@ public interface Model {
 	default void optionalSanityCheck(List<Integer> indices) {
 		int old = indices.get(indices.size() - 1);
 		double sum = 0.0;
-		// TODO: hard-coded
 		for (int i = 0; i < Vocabulary.size; i++) {
 			indices.set(indices.size() - 1, i);
 			double prob = this.modelSequence(indices);
@@ -45,6 +44,6 @@ public interface Model {
 	}
 
 	public static Model standard(Counter counter) {
-		return new AbsDiscModel(counter);
+		return new AbsDiscModModel(counter);
 	}
 }

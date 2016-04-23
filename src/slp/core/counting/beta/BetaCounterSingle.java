@@ -100,10 +100,39 @@ public class BetaCounterSingle extends BetaCounter {
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
+		out.writeInt(3);
+		out.writeInt(this.count);
+		if (this.successor1 != null) {
+			out.writeInt(1);
+			out.writeInt(this.successor1Index);
+			this.successor1.writeExternal(out);	
+		}
+		else {
+			out.writeInt(0);
+		}
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		this.count = in.readInt();
+		BetaCounter.nCounts[depthForReadingIn - 1][Math.min(this.count, 4) - 1]++;
+		int successors = in.readInt();
+		if (successors > 0) {
+			this.successor1Index = in.readInt();
+			int type1 = in.readInt();
+			BetaCounter counter;
+			switch (type1) {
+				case 0: counter = new BetaCounterMap(); break;
+				case 1: counter = new BetaCounterArray(); break;
+				case 2: counter = new BetaCounterSmall(); break;
+				case 3: counter = new BetaCounterSingle(); break;
+				default: counter = new BetaCounterMap();
+			}
+			BetaCounter.depthForReadingIn++;
+			counter.readExternal(in);
+			BetaCounter.depthForReadingIn--;
+			this.successor1 = counter;
+		}
 	}
 
 }

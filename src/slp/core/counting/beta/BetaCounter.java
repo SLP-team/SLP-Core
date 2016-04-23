@@ -71,4 +71,6 @@ public abstract class BetaCounter implements Counter {
 	}
 	
 	protected abstract int[] getDistinctCounts(int range, List<Integer> sequence, int index);
+	
+	static int depthForReadingIn = 0;
 }

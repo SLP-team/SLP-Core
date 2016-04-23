@@ -7,6 +7,10 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import slp.core.util.Configuration;
+
 import java.util.Set;
 
 public class BetaCounterMap extends BetaCounter {
@@ -244,14 +248,61 @@ public class BetaCounterMap extends BetaCounter {
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		// TODO Auto-generated method stub
-		
+		out.writeInt(0);
+		out.writeInt(this.count);
+		out.writeInt(this.successors.size());
+		for (Entry<Integer, BetaCounter> entry : this.successors.entrySet()) {
+			out.writeInt(entry.getKey());
+			entry.getValue().writeExternal(out);
+		}
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		// TODO Auto-generated method stub
-		
+		this.count = in.readInt();
+		// Special case: if count is 0, this must be the root and we read type instead (can't know the first time)
+		if (this.count == 0) {
+			BetaCounter.depthForReadingIn = 0;
+			this.count = in.readInt();
+			BetaCounter.nCounts = new int[Configuration.order()][4];
+		} else {
+			BetaCounter.nCounts[depthForReadingIn - 1][Math.min(this.count, 4) - 1]++;
+		}
+		readSuccessors(in);
+		initCountsArray();
 	}
 
+	private void readSuccessors(ObjectInput in) throws IOException, ClassNotFoundException {
+		int size = in.readInt(); 
+		if (size == 0) return;
+		this.successors = new HashMap<Integer, BetaCounter>(size, 1.00f);
+		for (int i = 0; i < size; i++) {
+			int index = in.readInt();
+			int type = in.readInt();
+			BetaCounter counter;
+			switch (type) {
+				case 0: counter = new BetaCounterMap(); break;
+				case 1: counter = new BetaCounterArray(); break;
+				case 2: counter = new BetaCounterSmall(); break;
+				case 3: counter = new BetaCounterSingle(); break;
+				default: counter = new BetaCounterMap();
+			}
+			BetaCounter.depthForReadingIn++;
+			counter.readExternal(in);
+			BetaCounter.depthForReadingIn--;
+			this.successors.put(index, counter);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void initCountsArray() {
+		this.countsArray = new Set[COUNT_OF_COUNTS_CUTOFF];
+		for (int i = 0; i < this.countsArray.length; i++) {
+			this.countsArray[i] = new HashSet<BetaCounter>();
+		}
+		for (BetaCounter counter : this.successors.values()) {
+			int index = Math.min(counter.getCount(), COUNT_OF_COUNTS_CUTOFF) - 1;
+			this.countsArray[index].add(counter);
+		}
+	}
 }

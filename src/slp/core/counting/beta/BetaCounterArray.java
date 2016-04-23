@@ -103,7 +103,7 @@ public class BetaCounterArray extends BetaCounter {
 	private int tryToGrow(Integer key) {
 		if (this.indices.length < MAX_SIZE) {
 			int length = this.indices.length;
-			int newLength = 4*length;
+			int newLength = Math.max(MAX_SIZE, 4*length);
 			this.indices = Arrays.copyOf(indices, newLength);
 			this.array = Arrays.copyOf(array, newLength);
 			for (int i = length; i < this.indices.length; i++) {
@@ -118,7 +118,7 @@ public class BetaCounterArray extends BetaCounter {
 	private void removeSuccessor(Integer key) {
 		boolean update = false;
 		for (int i = 0; i < this.indices.length - 1; i++) {
-			if (this.indices[i] == key) {
+			if (!update && this.indices[i] == key) {
 				update = true;
 			}
 			if (update) {
@@ -233,10 +233,47 @@ public class BetaCounterArray extends BetaCounter {
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
+		out.writeInt(1);
+		out.writeInt(this.count);
+		int size = 0;
+		for (int i = 0; i < this.array.length; i++) {
+			if (this.array[i] == null) break;
+			else size++;
+		}
+		out.writeInt(size);
+		for (int i = 0; i < size; i++) {
+			out.writeInt(this.indices[i]);
+		}
+		for (int i = 0; i < size; i++) {
+			this.array[i].writeExternal(out);
+		}
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		this.count = in.readInt();
+		BetaCounter.nCounts[depthForReadingIn - 1][Math.min(this.count, 4) - 1]++;
+		int size = in.readInt();
+		this.indices = new int[size];
+		this.array = new BetaCounter[size];
+		for (int i = 0; i < size; i++) {
+			this.indices[i] = in.readInt();
+		}
+		for (int i = 0; i < size; i++) {
+			int type = in.readInt();
+			BetaCounter counter;
+			switch (type) {
+				case 0: counter = new BetaCounterMap(); break;
+				case 1: counter = new BetaCounterArray(); break;
+				case 2: counter = new BetaCounterSmall(); break;
+				case 3: counter = new BetaCounterSingle(); break;
+				default: counter = new BetaCounterMap();
+			}
+			BetaCounter.depthForReadingIn++;
+			counter.readExternal(in);
+			BetaCounter.depthForReadingIn--;
+			this.array[i] = counter;
+		}
 	}
 
 }

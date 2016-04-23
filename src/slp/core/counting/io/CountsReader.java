@@ -18,13 +18,6 @@ public class CountsReader {
 		ois.close();
 		return Pair.of(vocabulary, counter);
 	}
-	
-	public static Vocabulary readVocabulary(File file) throws IOException, ClassNotFoundException {
-		ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
-		Vocabulary vocabulary = (Vocabulary) ois.readObject();
-		ois.close();
-		return vocabulary;
-	}
 
 	public static Counter readCounter(File file) throws IOException, ClassNotFoundException {
 		ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file));
@@ -32,4 +25,5 @@ public class CountsReader {
 		ois.close();
 		return counter;
 	}
+	
 }

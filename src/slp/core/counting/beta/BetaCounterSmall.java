@@ -204,10 +204,77 @@ public class BetaCounterSmall extends BetaCounter {
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
+		out.writeInt(2);
+		out.writeInt(this.count);
+		int successors = getDistinctSuccessors();
+		out.writeInt(successors);
+		if (successors > 0) {
+			out.writeInt(this.successor1Index);
+			this.successor1.writeExternal(out);
+			if (successors > 1) {
+				out.writeInt(this.successor2Index);
+				this.successor2.writeExternal(out);
+				if (successors > 2) {
+					out.writeInt(this.successor3Index);
+					this.successor3.writeExternal(out);
+				}
+			}
+		}
 	}
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		this.count = in.readInt();
+		BetaCounter.nCounts[depthForReadingIn - 1][Math.min(this.count, 4) - 1]++;
+		int successors = in.readInt();
+		if (successors > 0) {
+			this.successor1Index = in.readInt();
+			int type1 = in.readInt();
+			BetaCounter counter1;
+			switch (type1) {
+				case 0: counter1 = new BetaCounterMap(); break;
+				case 1: counter1 = new BetaCounterArray(); break;
+				case 2: counter1 = new BetaCounterSmall(); break;
+				case 3: counter1 = new BetaCounterSingle(); break;
+				default: counter1 = new BetaCounterMap();
+			}
+			BetaCounter.depthForReadingIn++;
+			counter1.readExternal(in);
+			BetaCounter.depthForReadingIn--;
+			this.successor1 = counter1;
+			if (successors > 1) {
+				this.successor2Index = in.readInt();
+				int type2 = in.readInt();
+				BetaCounter counter2;
+				switch (type2) {
+					case 0: counter2 = new BetaCounterMap(); break;
+					case 1: counter2 = new BetaCounterArray(); break;
+					case 2: counter2 = new BetaCounterSmall(); break;
+					case 3: counter2 = new BetaCounterSingle(); break;
+					default: counter2 = new BetaCounterMap();
+				}
+				BetaCounter.depthForReadingIn++;
+				counter2.readExternal(in);
+				BetaCounter.depthForReadingIn--;
+				this.successor2 = counter2;
+				if (successors > 2) {
+					this.successor3Index = in.readInt();
+					int type3 = in.readInt();
+					BetaCounter counter3;
+					switch (type3) {
+						case 0: counter3 = new BetaCounterMap(); break;
+						case 1: counter3 = new BetaCounterArray(); break;
+						case 2: counter3 = new BetaCounterSmall(); break;
+						case 3: counter3 = new BetaCounterSingle(); break;
+						default: counter3 = new BetaCounterMap();
+					}
+					BetaCounter.depthForReadingIn++;
+					counter3.readExternal(in);
+					BetaCounter.depthForReadingIn--;
+					this.successor3 = counter3;
+				}
+			}
+		}
 	}
 
 }

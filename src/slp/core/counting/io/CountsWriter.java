@@ -17,18 +17,11 @@ public class CountsWriter {
 		o.writeObject(counter);
 		o.close();
 	}
-
+	
 	public static void writeCounter(Counter counter, File file) throws IOException {
 		FileOutputStream out = new FileOutputStream(file);
 		ObjectOutputStream o = new ObjectOutputStream(out);
 		o.writeObject(counter);
-		o.close();
-	}
-
-	public static void writeVocabulary(Vocabulary vocabulary, File file) throws IOException, ClassNotFoundException {
-		FileOutputStream out = new FileOutputStream(file);
-		ObjectOutputStream o = new ObjectOutputStream(out);
-		o.writeObject(vocabulary);
 		o.close();
 	}
 }

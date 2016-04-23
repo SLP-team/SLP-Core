@@ -31,7 +31,7 @@ public class RecursiveRunner {
 	
 	public RecursiveRunner() {
 		this.tokenizer = Tokenizer.standard();
-		this.vocabulary= Vocabulary.create();
+		this.vocabulary= Vocabulary.empty();
 		this.sequencer = Sequencer.standard();
 		this.counter = Counter.standard();
 		this.model = Model.standard(this.counter);
