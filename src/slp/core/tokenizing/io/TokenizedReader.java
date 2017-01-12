@@ -4,8 +4,8 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
+import slp.core.io.Reader;
 import slp.core.tokenizing.Token;
-import slp.core.util.Reader;
 
 public abstract class TokenizedReader {
 	public Stream<Stream<Token>> read(File file) {

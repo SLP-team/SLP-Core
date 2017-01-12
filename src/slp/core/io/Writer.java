@@ -1,4 +1,4 @@
-package slp.core.util;
+package slp.core.io;
 
 import java.io.File;
 import java.io.FileWriter;

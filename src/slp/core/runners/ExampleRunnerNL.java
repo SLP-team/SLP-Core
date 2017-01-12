@@ -8,27 +8,36 @@ import slp.core.counting.Counter;
 import slp.core.counting.Vocabulary;
 import slp.core.counting.io.CountsReader;
 import slp.core.counting.io.CountsWriter;
+import slp.core.io.Reader;
 import slp.core.modeling.Model;
 import slp.core.sequences.Sequencer;
 import slp.core.tokenizing.Tokenizer;
 import slp.core.util.Pair;
-import slp.core.util.Reader;
 
 public class ExampleRunnerNL {
 
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		String root = (args.length > 0 ? args[0] : "E:/LMCorpus/");
+		File trainRoot = new File(root + "train");
+		File testRoot = new File(root + "test");
 		Vocabulary vocabulary = Vocabulary.fromFile(new File(root + "vocab.out"));
 		Counter	counter = Counter.standard();
 		Model model = Model.standard(counter);
-		for (int i = 1; i <= 5; i++) {
+		for (int i = 1; i < 100; i++) {
 			System.out.print(i + "\t");
 			long t = System.currentTimeMillis();
-			train(vocabulary, counter, new File(root + "train/" + (i < 10 ? "0" : "") + i));
-			double entropy = test(root, vocabulary, model);
-			System.out.println(entropy + "\t" + (System.currentTimeMillis() - t));
+			train(vocabulary, counter, new File(trainRoot, (i < 10 ? "0" : "") + i));
+			long timeTrain = System.currentTimeMillis() - t;
+			int count = counter.getCount();
+			int vocab = counter.getDistinctSuccessors();
+			System.out.print(count + "\t" + vocab + "\t");
+			vocabulary.close();
+			t = System.currentTimeMillis();
+			double entropy = test(testRoot, vocabulary, model);
+			long timeTest = System.currentTimeMillis() - t;
+			vocabulary.open();
+			System.out.println(entropy + "\t" + timeTrain + "\t" + timeTest);
 		}
-		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
 	}
 
 	private static void train(Vocabulary vocabulary, Counter counter, File trainFile) {
@@ -41,10 +50,10 @@ public class ExampleRunnerNL {
 			.forEachOrdered(counter::addForward);
 	}
 
-	private static double test(String root, Vocabulary vocabulary, Model model) {
+	private static double test(File testRoot, Vocabulary vocabulary, Model model) {
 		DoubleStream result = DoubleStream.empty();
-		for (int i = 0; i < 1; i++) {
-			DoubleStream test = test(vocabulary, model, new File(root + "test/0" + i));
+		for (int i = 0; i < 50; i++) {
+			DoubleStream test = test(vocabulary, model, new File(testRoot, (i < 10 ? "0" : "") + i));
 			result = DoubleStream.concat(result, test);
 		}
 		return result.average().orElse(0.0);
@@ -57,7 +66,7 @@ public class ExampleRunnerNL {
 		return Reader.readLines(testFile)
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
-			.map(sequencer::sequenceBackward)
+			.map(sequencer::sequenceFull)
 			.flatMap(x -> x.skip(1))
 			.mapToDouble(model::model)
 			.map(x -> Math.log(x)/log2);

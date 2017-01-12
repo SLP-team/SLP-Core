@@ -2,24 +2,26 @@ package slp.core.runners;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.Vocabulary;
+import slp.core.io.Reader;
 import slp.core.modeling.Model;
 import slp.core.sequences.Sequencer;
 import slp.core.tokenizing.Tokenizer;
-import slp.core.util.Reader;
 
 public class RecursiveRunner {
 
-	private static File trainDir = new File("../java2/fulldirs/ant/org/apache");
-	private static File testDir = new File("../java2/fulldirs/ant/org/apache");
-	public static void main(String[] args) throws IOException {
+	private static File trainDir = new File("E:/CP/GJava");
+	private static File testDir = new File("E:/CP/GJava/1datapoint");
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		RecursiveRunner runner = new RecursiveRunner();
 		runner.count(trainDir, true);
+//		runner.count(testDir, false);
 		System.out.println(runner.model(testDir).average().orElse(0.0));
 	}
 	
@@ -29,25 +31,31 @@ public class RecursiveRunner {
 	private final Counter counter;
 	private final Model model;
 	
-	public RecursiveRunner() {
+	public RecursiveRunner() throws ClassNotFoundException, IOException {
 		this.tokenizer = Tokenizer.standard();
-		this.vocabulary= Vocabulary.empty();
+		this.vocabulary= Vocabulary.fromFile(new File(trainDir.getParentFile(), "all.vocab"));
 		this.sequencer = Sequencer.standard();
+		System.out.println("Reading");
 		this.counter = Counter.standard();
+		System.out.println("Read");
 		this.model = Model.standard(this.counter);
 	}
 
-	public void count(File file, boolean add) {
-		if (file.getName().contains(".") || !file.isDirectory()) {
-			Stream<List<Integer>> sequences = Reader.readLines(file)
-				.map(x -> "<s> " + x + " </s>")
+	public void count(File file, boolean add) throws AccessDeniedException {
+		if (file.getName().endsWith(".java") && file.isFile()) {
+			Stream<List<Integer>> sequences = Stream.of(Reader.readContent(file))
 				.map(this.tokenizer::tokenize)
 				.map(this.vocabulary::toIndices)
 				.flatMap(this.sequencer::sequenceForward);
-			if (add) sequences.forEachOrdered(this.counter::addForward);
+			if (add) {
+				sequences.forEachOrdered(this.counter::addForward);
+			}
 			else sequences.forEachOrdered(this.counter::removeForward);
 		}
-		else {
+		else if (file.isDirectory()) {
+			if (file.getParentFile().equals(trainDir)) {
+				System.out.println(file + "\t" + this.counter.getCount() + "\t" + this.counter.getDistinctSuccessors());
+			}
 			for (String child : file.list()) {
 				File childFile = new File(file, child);
 				count(childFile, add);
@@ -58,12 +66,11 @@ public class RecursiveRunner {
 	private static final double log2 = Math.log(2);
 	public DoubleStream model(File file) {
 		DoubleStream entropies = DoubleStream.empty();
-		if (file.getName().contains(".") || !file.isDirectory()) {
-			DoubleStream fileEntropies = Reader.readLines(file)
-				.map(x -> "<s> " + x + " </s>")
+		if (file.getName().endsWith(".java") || !file.isDirectory()) {
+			DoubleStream fileEntropies = Stream.of(Reader.readContent(file))
 				.map(this.tokenizer::tokenize)
 				.map(this.vocabulary::toIndices)
-				.flatMap(this.sequencer::sequenceBackward)
+				.flatMap(this.sequencer::sequenceFull)
 				.mapToDouble(this.model::model)
 				.map(x -> -Math.log(x)/log2);
 			entropies = DoubleStream.concat(entropies, fileEntropies);
@@ -71,7 +78,11 @@ public class RecursiveRunner {
 		else {
 			for (String child : file.list()) {
 				File childFile = new File(file, child);
-				entropies = DoubleStream.concat(entropies, model(childFile));
+				try {
+					entropies = DoubleStream.concat(entropies, model(childFile));
+				} catch (NullPointerException e) {
+					continue;
+				}
 			}
 		}
 		return entropies;

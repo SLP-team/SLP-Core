@@ -7,7 +7,10 @@ public class SimpleTokenizer implements Tokenizer {
 
 	@Override
 	public Stream<Token> tokenize(String text) {
-		return Arrays.stream(text.split("\\s+")).map(this::tokenizeWord);
+		Stream<Token> start = text.startsWith("<s>") ? Stream.empty() : Stream.of(new Token("<s>"));
+		Stream<Token> line = Arrays.stream(text.split("\\s+")).map(this::tokenizeWord);
+		Stream<Token> end = text.endsWith("</s>") ? Stream.empty() : Stream.of(new Token("</s>"));
+		return Stream.concat(start, Stream.concat(line, end));
 	}
 	
 	@Override

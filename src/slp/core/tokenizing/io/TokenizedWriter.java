@@ -4,8 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.stream.Stream;
 
+import slp.core.io.Writer;
 import slp.core.tokenizing.Token;
-import slp.core.util.Writer;
 
 public abstract class TokenizedWriter {
 	public void writeTokens(File file, Stream<Stream<Token>> tokens) throws IOException {

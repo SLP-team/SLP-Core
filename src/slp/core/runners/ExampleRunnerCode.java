@@ -5,10 +5,10 @@ import java.io.IOException;
 
 import slp.core.counting.Counter;
 import slp.core.counting.Vocabulary;
+import slp.core.io.Reader;
 import slp.core.modeling.Model;
 import slp.core.sequences.Sequencer;
 import slp.core.tokenizing.Tokenizer;
-import slp.core.util.Reader;
 
 public class ExampleRunnerCode {
 	
@@ -28,6 +28,8 @@ public class ExampleRunnerCode {
 			.map(vocabulary::toIndices)
 			.flatMap(sequencer::sequenceForward)
 			.forEachOrdered(counter::addForward);
+		vocabulary.close();
+		
 		System.out.println(counter.getCount() + "\t" + counter.getDistinctSuccessors());
 		System.out.println((System.currentTimeMillis() - t)/1000 + "\t" + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())/1024/1024);
 		Model model = Model.standard(counter);
@@ -35,7 +37,7 @@ public class ExampleRunnerCode {
 			.map(x -> "<s> " + x + " </s>")
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
-			.flatMap(sequencer::sequenceBackward)
+			.flatMap(sequencer::sequenceFull)
 			.mapToDouble(model::model)
 			.map(x -> Math.log(x)/log2)
 			.average().orElse(0.0);

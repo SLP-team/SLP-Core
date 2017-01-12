@@ -22,11 +22,11 @@ public class SkipGramSequencer implements Sequencer {
 
 	@Override
 	public Stream<List<Integer>> sequenceForward(Stream<Integer> in) {
-		return sequenceBackward(in);
+		return sequenceFull(in);
 	}
 	
 	@Override
-	public Stream<List<Integer>> sequenceBackward(Stream<Integer> in) {
+	public Stream<List<Integer>> sequenceFull(Stream<Integer> in) {
 		List<Integer> line = in.collect(Collectors.toList());
 		List<List<Integer>> result = new ArrayList<List<Integer>>();
 		for (int start = 0; start < line.size() - 1; start++) {

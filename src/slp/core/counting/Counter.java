@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import slp.core.counting.beta.BetaCounterMap;
+import slp.core.counting.sequence.LightMapCounter;
 
 public interface Counter extends Externalizable {
 	
 	public static Counter standard() {
-		return new BetaCounterMap();
+		return new LightMapCounter();
 	}
 
 	/*
@@ -59,6 +59,14 @@ public interface Counter extends Externalizable {
 		}
 		return counts;
 	}
+	
+	public default void add(List<Integer> indices) {
+		update(indices, true);
+	}
+	
+	public default void remove(List<Integer> indices) {
+		update(indices, false);
+	}
 
 	/**
 	 * Update the counter with all (sub-)sequences that contain the last element in the provided sequence (and the empty sequence).
@@ -69,18 +77,18 @@ public interface Counter extends Externalizable {
 		}
 	}
 
-	public default void addBackward(List<Integer> indexStream) {
-		updateBackward(indexStream, true);
+	public default void addBackward(List<Integer> indices) {
+		updateBackward(indices, true);
 	}
 
-	public default void removeBackward(List<Integer> indexStream) {
-		updateBackward(indexStream, false);
+	public default void removeBackward(List<Integer> indices) {
+		updateBackward(indices, false);
 	}
 
 	public default void updateForward(List<Integer> indices, boolean count) {
 		for (int i = 0; i < indices.size(); i++) {
 			update(indices.subList(0, i + 1), count);
-		}	
+		}
 	}
 
 	public default void addForward(List<Integer> indices) {
