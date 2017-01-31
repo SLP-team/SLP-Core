@@ -37,7 +37,7 @@ public class ExampleRunnerCode {
 			.map(x -> "<s> " + x + " </s>")
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
-			.flatMap(sequencer::sequenceFull)
+			.flatMap(sequencer::sequenceBackward)
 			.mapToDouble(model::model)
 			.map(x -> Math.log(x)/log2)
 			.average().orElse(0.0);

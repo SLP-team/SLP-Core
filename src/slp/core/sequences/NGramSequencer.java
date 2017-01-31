@@ -32,16 +32,12 @@ public class NGramSequencer implements Sequencer {
 	}
 	
 	@Override
-	public Stream<List<Integer>> sequenceFull(Stream<Integer> in) {
+	public Stream<List<Integer>> sequenceBackward(Stream<Integer> in) {
 		List<Integer> line = in.collect(Collectors.toList());
 		List<List<Integer>> result = new ArrayList<List<Integer>>();
 		for (int end = 1; end <= line.size(); end++) {
 			int start = Math.max(0, end - Configuration.order());
 			result.add(line.subList(start, end));
-		}
-		for (int start = line.size() - Configuration.order() + 1; start < line.size(); start++) {
-			if (start <= 0) continue;
-			result.add(line.subList(start, line.size()));
 		}
 		// Skip start of line symbol, may need to be altered since we cannot presume its presence here
 		return result.stream().skip(1);

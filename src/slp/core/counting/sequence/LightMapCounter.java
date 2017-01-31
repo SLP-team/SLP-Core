@@ -12,8 +12,8 @@ import slp.core.util.Configuration;
 public class LightMapCounter implements Counter {
 
 	private static int[][] nCounts = new int[Configuration.order()][4];
-	private static final int COUNT_OF_COUNTS_CUTOFF = 1;
-	private static final double GROWTH_FACTOR = 1.1;
+	private static final int COUNT_OF_COUNTS_CUTOFF = 3;
+	private static final double GROWTH_FACTOR = 1.5;
 	
 	/*
 	 * 'counts' contains in order: own count, context count (sum of successor's counts),
@@ -53,7 +53,6 @@ public class LightMapCounter implements Counter {
 		update(indices, 0, count, true);
 	}
 
-	// TODO: potential uncount bug for counts[1] consistency with successors
 	public void update(List<Integer> indices, int index, boolean count, boolean fast) {
 		if (index < indices.size()) {
 			Integer key = indices.get(index);
@@ -79,6 +78,9 @@ public class LightMapCounter implements Counter {
 						}
 						if (successor[0] == 0) {
 							removeSucc(key);
+						}
+						for (int i = index; i <= indices.size(); i++) {
+							this.updateNCounts(i, -successor[0], count);
 						}
 					}
 					else {
@@ -115,6 +117,9 @@ public class LightMapCounter implements Counter {
 				putSucc(key, singleton);
 				if (fast || index == indices.size() - 1) {
 					updateCoCs(1, count);
+				}
+				for (int i = index; i <= indices.size(); i++) {
+					this.updateNCounts(i, 1, count);
 				}
 			}
 		}
@@ -156,6 +161,31 @@ public class LightMapCounter implements Counter {
 		}
 	}
 
+	public Object getNode(List<Integer> indices) {
+		return getSuccessor(indices, 0);
+	}
+
+	private Object getSuccessor(List<Integer> indices, int index) {
+		if (index == indices.size()) return this;
+		Integer next = indices.get(index);
+		Object succ = getSucc(next);
+		if (succ == null) return null;
+		else if (succ instanceof LightMapCounter) {
+			LightMapCounter successor = (LightMapCounter) succ;
+			return successor.getSuccessor(indices, index + 1);
+		}
+		else {
+			int[] successor = (int[]) succ;
+			if (!checkPartialSequence(indices, index, successor)) return null;
+			int[] trueSucc = new int[1 + successor.length - (indices.size() - index)];
+			trueSucc[0] = successor[0];
+			for (int i = 1; i < trueSucc.length; i++) {
+				trueSucc[i] = successor[i + indices.size() - index - 1];
+			}
+			return trueSucc;
+		}
+	}
+
 	@Override
 	public int[] getShortCounts(List<Integer> indices) {
 		return getShortCounts(indices, 0);
@@ -167,21 +197,22 @@ public class LightMapCounter implements Counter {
 		int[] counts = new int[2];
 		boolean nearLast = index == indices.size() - 1;
 		if (nearLast) counts[1] = this.counts[1];
-		if (succ == null) return counts;
-		else if (succ instanceof LightMapCounter) {
-			LightMapCounter successor = (LightMapCounter) succ;
-			if (!nearLast) return successor.getShortCounts(indices, index + 1);
-			counts[0] = successor.getCount();
-		}
-		else {
-			int[] successor = (int[]) succ;
-			if (checkPartialSequence(indices, index, successor)) {
-				counts[0] = -successor[0];
-				if (!nearLast) counts[1] = counts[0];
+		if (succ != null) {
+			if (succ instanceof LightMapCounter) {
+				LightMapCounter successor = (LightMapCounter) succ;
+				if (!nearLast) return successor.getShortCounts(indices, index + 1);
+				counts[0] = successor.getCount();
 			}
-			else if (!nearLast && successor.length >= indices.size() - index
-					&& checkPartialSequence(indices.subList(0, indices.size() - 1), index, successor)) {
-				counts[1] = -successor[0];
+			else {
+				int[] successor = (int[]) succ;
+				if (checkPartialSequence(indices, index, successor)) {
+					counts[0] = -successor[0];
+					if (!nearLast) counts[1] = counts[0];
+				}
+				else if (!nearLast && successor.length >= indices.size() - index
+						&& checkPartialSequence(indices.subList(0, indices.size() - 1), index, successor)) {
+					counts[1] = -successor[0];
+				}
 			}
 		}
 		return counts;
@@ -205,14 +236,14 @@ public class LightMapCounter implements Counter {
 				int[] successor = (int[]) succ;
 				int[] distinctCounts = new int[range];
 				if (checkPartialSequence(indices, index, successor) && !checkExactSequence(indices, index, successor)) {
-					distinctCounts[Math.min(range - 1, -successor[0])]++;
+					distinctCounts[Math.min(range - 1, -successor[0] - 1)]++;
 				}
 				return distinctCounts;
 			}
 		} else {
 			int[] distinctCounts = new int[range];
 			int totalDistinct = this.getDistinctSuccessors();
-			for (int i = 2; i < this.counts.length - 1; i++) {
+			for (int i = 2; i < this.counts.length - 1 && i - 1 < range; i++) {
 				int countOfCountsI = this.counts[i];
 				distinctCounts[i - 2] = countOfCountsI;
 				totalDistinct -= countOfCountsI;
@@ -258,7 +289,6 @@ public class LightMapCounter implements Counter {
 		this.succs = new Object[successors];
 		int pos = 0;
 		for (; pos < successors; pos++) {
-			if (successors > 1500000 && (pos < 500 || pos % 1000 == 0)) System.out.println(pos);
 			int key = in.readInt();
 			int code = in.readInt();
 			Object value;
@@ -328,6 +358,7 @@ public class LightMapCounter implements Counter {
 	/*
 	 * Map bookkeeping
 	 */
+	// Binary search, based on java.util.Arrays.binarySearch0
 	private int getSuccIx(int key) {
 		int low = 0;
 		int high = this.succIX.length - 1;
@@ -338,7 +369,7 @@ public class LightMapCounter implements Counter {
 			else if (midVal > key) high = mid - 1;
 			else return mid; // key found
 		}
-		return -(low + 1);  // key not found.
+		return -(low + 1); // key not found.
 	}
 	
 	private Object getSucc(Integer key) {
@@ -358,8 +389,9 @@ public class LightMapCounter implements Counter {
 			}
 			this.succIX[this.succIX.length - 1] = Integer.MAX_VALUE;
 			int padding = getSuccIx(Integer.MAX_VALUE);
-			if (padding > 10 && padding < this.succIX.length / 2) {
+			if (padding >= 5 && padding < this.succIX.length / 2) {
 				this.succIX = Arrays.copyOf(this.succIX, padding + 1);
+				this.succs = Arrays.copyOf(this.succs, padding + 1);
 			}
 		}
 	}

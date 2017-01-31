@@ -31,11 +31,9 @@ public class ExampleRunnerNL {
 			int count = counter.getCount();
 			int vocab = counter.getDistinctSuccessors();
 			System.out.print(count + "\t" + vocab + "\t");
-			vocabulary.close();
 			t = System.currentTimeMillis();
 			double entropy = test(testRoot, vocabulary, model);
 			long timeTest = System.currentTimeMillis() - t;
-			vocabulary.open();
 			System.out.println(entropy + "\t" + timeTrain + "\t" + timeTest);
 		}
 	}
@@ -52,7 +50,7 @@ public class ExampleRunnerNL {
 
 	private static double test(File testRoot, Vocabulary vocabulary, Model model) {
 		DoubleStream result = DoubleStream.empty();
-		for (int i = 0; i < 50; i++) {
+		for (int i = 0; i < 1; i++) {
 			DoubleStream test = test(vocabulary, model, new File(testRoot, (i < 10 ? "0" : "") + i));
 			result = DoubleStream.concat(result, test);
 		}
@@ -66,8 +64,8 @@ public class ExampleRunnerNL {
 		return Reader.readLines(testFile)
 			.map(tokenizer::tokenize)
 			.map(vocabulary::toIndices)
-			.map(sequencer::sequenceFull)
-			.flatMap(x -> x.skip(1))
+			.map(sequencer::sequenceBackward)
+			.flatMap(x -> x)
 			.mapToDouble(model::model)
 			.map(x -> Math.log(x)/log2);
 	}

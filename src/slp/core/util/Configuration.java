@@ -2,7 +2,7 @@ package slp.core.util;
 
 public class Configuration {
 
-	private static int ORDER = 7;
+	private static int ORDER = 5;
 	private static int UNK_CUTOFF = 0;
 
 	public static int order() {

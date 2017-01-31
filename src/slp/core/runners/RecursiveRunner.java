@@ -21,7 +21,6 @@ public class RecursiveRunner {
 	public static void main(String[] args) throws IOException, ClassNotFoundException {
 		RecursiveRunner runner = new RecursiveRunner();
 		runner.count(trainDir, true);
-//		runner.count(testDir, false);
 		System.out.println(runner.model(testDir).average().orElse(0.0));
 	}
 	
@@ -35,9 +34,7 @@ public class RecursiveRunner {
 		this.tokenizer = Tokenizer.standard();
 		this.vocabulary= Vocabulary.fromFile(new File(trainDir.getParentFile(), "all.vocab"));
 		this.sequencer = Sequencer.standard();
-		System.out.println("Reading");
 		this.counter = Counter.standard();
-		System.out.println("Read");
 		this.model = Model.standard(this.counter);
 	}
 
@@ -70,7 +67,7 @@ public class RecursiveRunner {
 			DoubleStream fileEntropies = Stream.of(Reader.readContent(file))
 				.map(this.tokenizer::tokenize)
 				.map(this.vocabulary::toIndices)
-				.flatMap(this.sequencer::sequenceFull)
+				.flatMap(this.sequencer::sequenceBackward)
 				.mapToDouble(this.model::model)
 				.map(x -> -Math.log(x)/log2);
 			entropies = DoubleStream.concat(entropies, fileEntropies);

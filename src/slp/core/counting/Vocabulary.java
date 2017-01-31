@@ -1,14 +1,11 @@
 package slp.core.counting;
 
 import java.io.BufferedWriter;
-import java.io.Externalizable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -19,22 +16,18 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import com.google.common.collect.HashBiMap;
 
 import slp.core.io.Reader;
 import slp.core.tokenizing.Token;
 import slp.core.tokenizing.Tokenizer;
 import slp.core.util.Configuration;
 
-public class Vocabulary implements Externalizable {
+public class Vocabulary {
 
 	private static final Token UNK = new Token("<UNK>");
-	private static final long serialVersionUID = -1572227007765465883L;
 	private Map<Token, Integer> wordIndices;
 	private List<Token> words;
 	private List<Integer> counts;
@@ -100,6 +93,10 @@ public class Vocabulary implements Externalizable {
 		return tokens.map(this::translate);
 	}
 	
+	public Integer translate(String text) {
+		return this.wordIndices.get(text);
+	}
+	
 	public Integer translate(Token token) {
 		return this.wordIndices.get(token);
 	}
@@ -118,6 +115,7 @@ public class Vocabulary implements Externalizable {
 				index = this.wordIndices.size();
 				this.wordIndices.put(token, index);
 				this.words.add(token);
+				this.counts.add(1);
 			}
 		}
 		return index;
@@ -155,7 +153,7 @@ public class Vocabulary implements Externalizable {
 		Vocabulary vocabulary = new Vocabulary(false);
 		Reader.readLines(file)
 			.map(x -> x.split("\t"))
-			.filter(x -> Integer.parseInt(x[0]) >= cutoff)
+			.filter(x -> cutoff <= 0 || Integer.parseInt(x[0]) >= cutoff)
 			.forEachOrdered(split -> {
 				Integer count = Integer.parseInt(split[0]);
 				Token key = new Token(split[1]);
@@ -190,14 +188,17 @@ public class Vocabulary implements Externalizable {
 	public static Vocabulary build(Tokenizer tokenizer, File... files) throws NumberFormatException, IOException {
 		return build(tokenizer, Configuration.unkCutof(), files);
 	}
+
+	public static Vocabulary build(Tokenizer tokenizer, List<File> files) throws NumberFormatException, IOException {
+		return build(tokenizer, Configuration.unkCutof(), files.toArray(new File[0]));
+	}
 	
 	public static Vocabulary build(Tokenizer tokenizer, int countCutoff, File... files) throws NumberFormatException, IOException {
 		Vocabulary temp = new Vocabulary();
 		int c = 0;
 		for (File file : files) {
 			if (++c % 1000 == 0) System.out.println("Building @ " + c + " of " + files.length);
-			Reader.readLines(file)
-				.parallel()
+			Stream.of(Reader.readContent(file))
 				.flatMap(tokenizer::tokenize)
 				.sequential()
 				.forEach(temp::insert);
@@ -231,25 +232,6 @@ public class Vocabulary implements Externalizable {
 		return vocabulary;
 	}
 
-	@Override
-	public void writeExternal(ObjectOutput out) throws IOException {
-		out.writeInt(this.wordIndices.size());
-		for (Entry<Token, Integer> entry : this.wordIndices.entrySet()) {
-			out.writeObject(entry.getKey());
-			out.writeInt(entry.getValue());
-		}
-		out.writeObject(this.wordIndices);
-	}
-
-	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		int size = in.readInt();
-		this.wordIndices = HashBiMap.create(size);
-		for (int i = 0; i < size; i++) {
-			wordIndices.put((Token) in.readObject(), in.readInt());
-		}
-	}
-	
 	public static void writeVocabulary(Vocabulary vocabulary, File file) throws IOException {
 		FileOutputStream out = new FileOutputStream(file);
 		ObjectOutputStream o = new ObjectOutputStream(out);

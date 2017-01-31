@@ -1,4 +1,4 @@
-package slp.core.modeling;
+package slp.core.modeling.ngram;
 
 import java.util.List;
 
@@ -29,6 +29,10 @@ public class AbsDiscModModel extends NGramModel {
 			2 - 3*Y*n3/n2,
 			3 - 4*Y*n4/n3
 		};
+		// Smooth out extreme (possibly non-finite) discount factors (in case of few observations)
+		for (int i = 0; i < Ds.length; i++) {
+			if (Ds[i] < 0.25*(i + 1) || Ds[i] > i + 1) Ds[i] = 0.6 * (i + 1);
+		}
 		int[] Ns = this.counter.getDistinctCounts(3, in.subList(0, in.size() - 1));
 		
 		// Probability calculation

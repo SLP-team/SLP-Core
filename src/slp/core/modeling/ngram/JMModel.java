@@ -1,4 +1,4 @@
-package slp.core.modeling;
+package slp.core.modeling.ngram;
 
 import java.util.List;
 
