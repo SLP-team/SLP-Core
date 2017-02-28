@@ -286,7 +286,7 @@ public class Main {
 			try (FileWriter fw = new FileWriter(out)) {
 				for (Entry<File, List<Double>> entry : fileProbs.entrySet()) {
 					fw.append(entry.getKey() + "\n");
-					for (Double d : entry.getValue()) fw.append(String.format("%.6f", d));
+					for (Double d : entry.getValue()) fw.append(String.format("%.6f\n", d));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
