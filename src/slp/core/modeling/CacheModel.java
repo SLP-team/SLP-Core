@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import slp.core.counting.Counter;
 import slp.core.modeling.ngram.NGramModel;
@@ -18,7 +19,7 @@ public class CacheModel extends NGramModel {
 	private Model model;
 	
 	private Deque<List<Integer>> cache;
-	private boolean open;
+	static boolean open;
 	
 	public CacheModel() {
 		this(DEFAULT_CAPACITY);
@@ -41,26 +42,25 @@ public class CacheModel extends NGramModel {
 		this.capacity = capacity;
 		this.cache = new ArrayDeque<List<Integer>>(this.capacity);
 		this.model = model;
-		this.open = true;
+		open = true;
 	}
 
 	@Override
 	public Pair<Double, Double> modelWithConfidence(List<Integer> in) {
 		Pair<Double, Double> prob = this.model.modelWithConfidence(in);
-		if (this.open && in.size() == Configuration.order()) updateCache(in);
+		if (open && in.size() == Configuration.order()) updateCache(in);
 		return prob;
 	}
 	
 	@Override
-	protected Map<Integer, List<Pair<Double, Double>>> predictWithConfidence(List<Integer> in, int limit) {
-		this.open = false;
-		Map<Integer, List<Pair<Double, Double>>> prediction = this.model.predictWithConfidence(in, limit);
-		updateCache(in);
-		this.open = true;
+	protected Map<Integer, List<Pair<Double, Double>>> predictWithConfidence(List<Integer> in, Set<Integer> dejavu, int limit) {
+		open = false;
+		Map<Integer, List<Pair<Double, Double>>> prediction = this.model.predictWithConfidence(in, dejavu, limit);
+		open = true;
 		return prediction;
 	}
 
-	private void updateCache(List<Integer> sequence) {
+	void updateCache(List<Integer> sequence) {
 		if (this.capacity == 0) return;
 		this.cache.addLast(sequence);
 		this.counter.addForward(sequence);

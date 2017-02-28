@@ -2,6 +2,8 @@ package slp.core.tokenizing;
 
 import java.util.stream.Stream;
 
+import slp.core.tokenizing.simple.SimpleTokenizer;
+
 public interface Tokenizer {
 
 	public Stream<Token> tokenize(String text);

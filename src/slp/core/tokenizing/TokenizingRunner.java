@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.stream.Stream;
 
+import slp.core.tokenizing.simple.SimpleTokenizer;
+
 public class TokenizingRunner  {
 
 	private final Tokenizer tokenizer;

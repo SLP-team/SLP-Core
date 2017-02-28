@@ -10,23 +10,19 @@ import slp.core.tokenizing.Tokenizer;
 
 public class CounterRunner {
 
-	public static void count(File file, Counter counter, Vocabulary vocabulary) {
-		count(file, counter, Tokenizer.standard(), vocabulary, true);
-	}
-	
-	public static void count(File file, Counter counter, Vocabulary vocabulary, boolean add) {
-		count(file, counter, Tokenizer.standard(), vocabulary, add);
-	}
-
 	public static void count(File file, Counter counter, Tokenizer tokenizer, Vocabulary vocabulary) {
-		count(file, counter, tokenizer, vocabulary, Sequencer.standard(), true);
+		count(file, counter, tokenizer, vocabulary, Sequencer.standard());
 	}
 	
 	public static void count(File file, Counter counter, Tokenizer tokenizer, Vocabulary vocabulary, boolean add) {
 		count(file, counter, tokenizer, vocabulary, Sequencer.standard(), add);
 	}
 
-	private static void count(File file, Counter counter, Tokenizer tokenizer, Vocabulary vocabulary, Sequencer sequencer, boolean add) {
+	public static void count(File file, Counter counter, Tokenizer tokenizer, Vocabulary vocabulary, Sequencer sequencer) {
+		count(file, counter, tokenizer, vocabulary, sequencer, true);
+	}
+	
+	public static void count(File file, Counter counter, Tokenizer tokenizer, Vocabulary vocabulary, Sequencer sequencer, boolean add) {
 		Stream<List<Integer>> sequences = Stream.of(Reader.readContent(file))
 				.map(tokenizer::tokenize)
 				.map(vocabulary::toIndices)

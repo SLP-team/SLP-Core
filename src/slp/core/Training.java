@@ -16,19 +16,16 @@ import slp.core.util.Util;
 
 public class Training {
 
-	static void train(File inDir, File outPath, Tokenizer tokenizer, Vocabulary vocabulary) throws NumberFormatException, IOException {
+	public static void train(File inDir, File outPath, Tokenizer tokenizer, Vocabulary vocabulary) throws NumberFormatException, IOException {
 		boolean emptyVocab = vocabulary.size() <= 1;
 		List<File> files = new ArrayList<>();
+		files.add(inDir);
 		if (emptyVocab) {
-			files = Util.getFiles(inDir);
-			vocabulary = Vocabulary.build(tokenizer, files);
-		}
-		else {
-			files.add(inDir);
+			vocabulary = Vocabulary.build(tokenizer, Util.getFiles(inDir));
 		}
 		System.out.println("Vocabulary retrieved");
 		Counter counter = Counter.standard();
-		countAll(files, tokenizer, vocabulary, counter);
+		train(files, tokenizer, vocabulary, counter);
 		try {
 			CountsWriter.writeCounter(counter, outPath);
 			if (emptyVocab) Vocabulary.toFile(vocabulary, new File(outPath.getAbsolutePath() + ".vocab"));
@@ -37,7 +34,17 @@ public class Training {
 		}
 	}
 
-	static void countAll(List<File> files, Tokenizer tokenizer, Vocabulary vocabulary, Counter counter) {
+	public static Counter train(File root, Tokenizer tokenizer, Vocabulary vocabulary) {
+		return train(Util.getFiles(root), tokenizer, vocabulary);
+	}
+
+	public static Counter train(List<File> files, Tokenizer tokenizer, Vocabulary vocabulary) {
+		Counter counter = Counter.standard();
+		countAll(files, tokenizer, vocabulary, Sequencer.standard(), counter);
+		return counter;
+	}
+
+	public static void train(List<File> files, Tokenizer tokenizer, Vocabulary vocabulary, Counter counter) {
 		countAll(files, tokenizer, vocabulary, Sequencer.standard(), counter);
 	}
 	
@@ -57,8 +64,9 @@ public class Training {
 					.map(vocabulary::toIndices)
 					.flatMap(sequencer::sequenceForward)
 					.forEachOrdered(counter::addForward);
-				if ((i + 1) % 1000 == 0 || i + 1 == files.size())
+				if (files.size() < 100 || i + 1 == files.size() || (i + 1) % 1000 == 0) {
 					System.out.println("Counting at file " + (i + 1) + ", tokens processed: " + counter.getCount());
+				}
 			}
 		}
 	}

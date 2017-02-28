@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -47,7 +48,7 @@ public abstract class NGramModel extends Model {
 	public List<Integer> predict(List<Integer> in, int limit) {
 		Map<Integer, List<Pair<Double, Double>>> predictions = new HashMap<>();
 		int start = in.size() < Configuration.order() ? 0 : 1;
-		for (int i = start; i < in.size(); i++) {
+		for (int i = start; i <= in.size(); i++) {
 			Map<Integer, List<Pair<Double, Double>>> subs = predictWithConfidence(in.subList(i, in.size()), limit);
 			if (subs == null) continue;
 			for (Integer key : subs.keySet()) {
@@ -65,9 +66,9 @@ public abstract class NGramModel extends Model {
 			.collect(Collectors.toList());
 	}
 
-	private Map<Integer, Pair<Integer, List<Integer>>> mem = new HashMap<>();
+	private Map<List<Integer>, Pair<Integer, List<Integer>>> mem = new HashMap<>();
 	@Override
-	protected Map<Integer, List<Pair<Double, Double>>> predictWithConfidence(List<Integer> in, int limit) {
+	protected Map<Integer, List<Pair<Double, Double>>> predictWithConfidence(List<Integer> in, Set<Integer> dejavu, int limit) {
 		if (!(this.counter instanceof LightMapCounter)) return null;
 		Object node = ((LightMapCounter) this.counter).getNode(in);
 		if (node == null) return null;
@@ -75,6 +76,7 @@ public abstract class NGramModel extends Model {
 			int[] singleton = (int[]) node;
 			if (singleton.length == 1) return null;
 			int prediction = singleton[1];
+			if (dejavu.contains(prediction)) return null;
 			List<Pair<Double, Double>> confs = new ArrayList<>();
 			List<Integer> temp = new ArrayList<>(in);
 			temp.add(prediction);
@@ -87,13 +89,12 @@ public abstract class NGramModel extends Model {
 			LightMapCounter counter = (LightMapCounter) node;
 			int[] succIXs = counter.getSuccIXs();
 			List<Integer> top;
-			int key = in.size() > 1 ? 0 : 31*((counter.getNCount(1, 1) + 7*counter.getNCount(1, 2) + 43*counter.getNCount(1, 3))
-										+ 31*(counter.getDistinctSuccessors() + 31*counter.getCount()));
-			if (in.size() == 1 && this.mem.containsKey(in.get(0)) && this.mem.get(in.get(0)).left.equals(key)) {
-				top = this.mem.get(in.get(0)).right;
+			int key = 31*(counter.getDistinctSuccessors() + 31*counter.getCount());
+			if (this.mem.containsKey(in) && this.mem.get(in).left.equals(key)) {
+				top = this.mem.get(in).right;
 			}
 			else {
-				if (in.size() == 1) this.mem.remove(in.get(0));
+				if (this.mem.containsKey(in)) this.mem.clear();
 				Map<Integer, Integer> counts = Arrays.stream(succIXs)
 					.mapToObj(i -> i)
 					.filter(i -> i != Integer.MAX_VALUE)
@@ -101,23 +102,26 @@ public abstract class NGramModel extends Model {
 				if (counts.isEmpty()) return null;
 				top = counts.entrySet().stream()
 						.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
-						.limit(2*limit)
+						.limit(limit)
 						.map(e -> e.getKey())
 						.collect(Collectors.toList());
-				if (in.size() == 1) {
-					this.mem.put(in.get(0), Pair.of(key, top));
+				if (counts.size() > 1000) {
+					this.mem.put(in, Pair.of(key, top));
 				}
 			}
 			Map<Integer, List<Pair<Double, Double>>> tops = new ConcurrentHashMap<>();
-			top.stream().parallel().forEach(ix -> {
-				List<Pair<Double, Double>> confs = new ArrayList<>();
-				List<Integer> temp = new ArrayList<>(in);
-				temp.add(ix);
-				for (int i = temp.size() - 1; i >= 0; i--) {
-					confs.add(modelWithConfidence(temp.subList(i, temp.size())));
-				}
-				tops.put(ix, confs);
-			});
+			top.stream()
+				.filter(ix -> !dejavu.contains(ix))
+				.limit(Math.max(1, limit - dejavu.size()))
+				.forEach(ix -> {
+					List<Pair<Double, Double>> confs = new ArrayList<>();
+					List<Integer> temp = new ArrayList<>(in);
+					temp.add(ix);
+					for (int i = temp.size() - 1; i >= 0; i--) {
+						confs.add(modelWithConfidence(temp.subList(i, temp.size())));
+					}
+					tops.put(ix, confs);
+				});
 			return tops;
 		}
 	}

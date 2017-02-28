@@ -5,20 +5,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import slp.core.counting.Vocabulary;
 import slp.core.util.Configuration;
 
 public class NGramSequencer implements Sequencer {
-
-	private final Vocabulary vocabulary;
-	
-	public NGramSequencer() {
-		this(new Vocabulary());
-	}
-
-	public NGramSequencer(Vocabulary vocabulary) {
-		this.vocabulary = vocabulary;
-	}
 
 	@Override
 	public Stream<List<Integer>> sequenceForward(Stream<Integer> in) {
@@ -41,9 +30,5 @@ public class NGramSequencer implements Sequencer {
 		}
 		// Skip start of line symbol, may need to be altered since we cannot presume its presence here
 		return result.stream().skip(1);
-	}
-
-	public Vocabulary getVocabulary() {
-		return this.vocabulary;
 	}
 }

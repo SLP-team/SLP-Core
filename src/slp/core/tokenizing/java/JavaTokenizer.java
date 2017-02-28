@@ -24,6 +24,77 @@ public class JavaTokenizer implements Tokenizer {
 		return process(text, scanner).stream().map(Token::new);
 	}
 
+	public List<List<String>> tokenizeLines(String text) {
+		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.4", "1.5");
+		text = filterUnderScores(text);
+		text = filterBinLits(text);
+		scanner.setSource(text.toCharArray());
+		List<List<String>> lineTokens = new ArrayList<>();
+		List<String> tokens = new ArrayList<>();
+		tokens.add("<s>");
+		lineTokens.add(new ArrayList<>());
+		lineTokens.get(0).add("<s>");
+		int nextToken = 0;
+		int line = 0;
+		while (true) {
+			try {
+				nextToken = scanner.getNextToken();
+				if (nextToken == ITerminalSymbols.TokenNameEOF) break;
+				int ln = scanner.getLineNumber(scanner.getCurrentTokenStartPosition());
+				if (ln > line) {
+					for (int i = line + 1; i <= ln; i++) lineTokens.add(new ArrayList<>());
+					line = ln;
+				}
+			} catch (InvalidInputException e) {
+				continue;
+			}
+			String val = new String(scanner.getCurrentTokenSource());
+			if (val.length() >= 15) {
+				if (val.startsWith("\"")) val = "\"\"";
+			}
+			if (val.startsWith("\"") && val.endsWith("\"")) {
+				val = val.replaceAll("\n", "\\n");
+				val = val.replaceAll("\r", "\\r");
+				val = val.replaceAll("\t", "\\t");
+			}
+			else if (val.startsWith("\'") && val.endsWith("\'")) {
+				val = val.replaceAll("\n", "\\n");
+				val = val.replaceAll("\r", "\\r");
+				val = val.replaceAll("\t", "\\t");
+			}
+			// For Java, we have to add heuristic check regarding breaking up >>
+			if (val.matches(">>+")) {
+				boolean split = false;
+				for (int i = tokens.size() - 1; i >= 0; i--) {
+					String token = tokens.get(i);
+					if (token.matches("[,\\.\\?\\[\\]]") || Character.isUpperCase(token.charAt(0))
+							|| token.equals("extends") || token.equals("super")) {
+						continue;
+					}
+					else if (token.equals("<")) {
+						split = true;
+						break;
+					}
+					else {
+						break;
+					}
+				}
+				if (split) {
+					for (int i = 0; i < val.length(); i++) {
+						tokens.add(">");
+						lineTokens.get(lineTokens.size() - 1).add(">");
+					}
+					continue;
+				}
+			}
+			tokens.add(val);
+			lineTokens.get(lineTokens.size() - 1).add(val);
+		}
+		tokens.add("</s>");
+		lineTokens.get(lineTokens.size() - 1).add("</s>");
+		return lineTokens;
+	}
+
 	private List<String> process(String text, IScanner scanner) {
 		text = filterUnderScores(text);
 		text = filterBinLits(text);

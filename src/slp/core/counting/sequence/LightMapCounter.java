@@ -13,7 +13,7 @@ public class LightMapCounter implements Counter {
 
 	private static int[][] nCounts = new int[Configuration.order()][4];
 	private static final int COUNT_OF_COUNTS_CUTOFF = 3;
-	private static final double GROWTH_FACTOR = 1.5;
+	private static final double GROWTH_FACTOR = 1.1;
 	
 	/*
 	 * 'counts' contains in order: own count, context count (sum of successor's counts),
@@ -79,7 +79,7 @@ public class LightMapCounter implements Counter {
 						if (successor[0] == 0) {
 							removeSucc(key);
 						}
-						for (int i = index; i <= indices.size(); i++) {
+						for (int i = index + 1; i <= indices.size(); i++) {
 							this.updateNCounts(i, -successor[0], count);
 						}
 					}
@@ -118,7 +118,7 @@ public class LightMapCounter implements Counter {
 				if (fast || index == indices.size() - 1) {
 					updateCoCs(1, count);
 				}
-				for (int i = index; i <= indices.size(); i++) {
+				for (int i = index + 1; i <= indices.size(); i++) {
 					this.updateNCounts(i, 1, count);
 				}
 			}
@@ -358,16 +358,26 @@ public class LightMapCounter implements Counter {
 	/*
 	 * Map bookkeeping
 	 */
-	// Binary search, based on java.util.Arrays.binarySearch0
 	private int getSuccIx(int key) {
-		int low = 0;
-		int high = this.succIX.length - 1;
+		if (this.succIX.length < 10000) {
+			return Arrays.binarySearch(this.succIX, key);
+		}
+		else {
+			int high = this.succIX.length;
+			int guess = key >= high ? high >>> 1 : key;
+			int ix = binSearch(key, 0, guess, high);
+			return ix;
+		}
+	}
+
+	// Binary search with initial values, otherwise based on java.util.Arrays.binarySearch0
+	private int binSearch(int key, int low, int midGuess, int high) {
 		while (low <= high) {
-			int mid = (low + high) >>> 1;
-			int midVal = this.succIX[mid];
-			if (midVal < key) low = mid + 1;
-			else if (midVal > key) high = mid - 1;
-			else return mid; // key found
+			int midVal = this.succIX[midGuess];
+			if (midVal < key) low = midGuess + 1;
+			else if (midVal > key) high = midGuess - 1;
+			else return midGuess; // key found
+			midGuess = (low + high) >>> 1;
 		}
 		return -(low + 1); // key not found.
 	}
@@ -384,6 +394,11 @@ public class LightMapCounter implements Counter {
 		int ix = getSuccIx(index);
 		if (ix >= 0) {
 			if (ix < this.succIX.length - 1) {
+//				for (int i = ix; i < this.succIX.length - 1; i++) {
+//					this.succIX[i] = this.succIX[i + 1];
+//					this.succs[i] = this.succs[i + 1];
+//					if (this.succIX[i] == Integer.MAX_VALUE) break;
+//				}
 				System.arraycopy(this.succIX, ix + 1, this.succIX, ix, this.succIX.length - ix - 1);
 				System.arraycopy(this.succs, ix + 1, this.succs, ix, this.succs.length - ix - 1);
 			}
@@ -404,6 +419,11 @@ public class LightMapCounter implements Counter {
 			ix = -ix - 1;
 			if (ix >= this.succIX.length) grow();
 			if (this.succIX[ix] != Integer.MAX_VALUE) {
+//				for (int i = this.succIX.length - 2; i >= ix; i--) {
+//					if (this.succIX[i] == Integer.MAX_VALUE) continue;
+//					this.succIX[i + 1] = this.succIX[i];
+//					this.succs[i + 1] = this.succs[i];
+//				}
 				System.arraycopy(this.succIX, ix, this.succIX, ix + 1, this.succIX.length - ix - 1);
 				System.arraycopy(this.succs, ix, this.succs, ix + 1, this.succs.length - ix - 1);
 			}

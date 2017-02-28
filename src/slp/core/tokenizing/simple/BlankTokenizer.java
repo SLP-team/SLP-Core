@@ -1,7 +1,10 @@
-package slp.core.tokenizing;
+package slp.core.tokenizing.simple;
 
 import java.util.Arrays;
 import java.util.stream.Stream;
+
+import slp.core.tokenizing.Token;
+import slp.core.tokenizing.Tokenizer;
 
 public class BlankTokenizer implements Tokenizer {
 

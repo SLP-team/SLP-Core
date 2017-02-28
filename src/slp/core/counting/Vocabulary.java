@@ -94,7 +94,7 @@ public class Vocabulary {
 	}
 	
 	public Integer translate(String text) {
-		return this.wordIndices.get(text);
+		return this.wordIndices.get(new Token(text));
 	}
 	
 	public Integer translate(Token token) {
@@ -123,6 +123,10 @@ public class Vocabulary {
 
 	public Stream<Token> findWords(Stream<Integer> indices) {
 		return indices.map(this::toWord);
+	}
+	
+	public List<Token> toWords(List<Integer> indices) {
+		return indices.stream().map(this::toWord).collect(Collectors.toList());
 	}
 	
 	public Token toWord(Integer index) {
