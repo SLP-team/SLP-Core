@@ -347,7 +347,7 @@ public class Main {
 		String file = getArg(args, "--verbose");
 		if (file != null && file.length() > 0) {
 			File output = new File(file);
-			if (output.exists()) return output;
+			if (output.getParentFile().exists()) return output;
 		}
 		return null;
 	}
