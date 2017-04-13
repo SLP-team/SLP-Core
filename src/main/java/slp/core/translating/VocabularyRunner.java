@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +16,6 @@ import java.util.stream.Collectors;
 
 import slp.core.io.Reader;
 import slp.core.lexing.LexerRunner;
-import slp.core.util.Util;
 
 public class VocabularyRunner {
 	
@@ -53,14 +54,20 @@ public class VocabularyRunner {
 	 * @return 
 	 */
 	public static void build(File root) {
-		List<File> files = Util.getFiles(root);
+		int[] c = { 0 };
 		Map<String, Integer> counts = new LinkedHashMap<>();
-		int c = 0;
-		for (File file : files) {
-			if (++c % 1000 == 0) System.out.println("Building vocabulary, file " + c + " of " + files.size());
-			LexerRunner.lex(file).stream()
-				.flatMap(List::stream)
-				.forEach(t -> counts.merge(t, 1, Integer::sum));
+		try {
+			Files.walk(root.toPath())
+				.map(Path::toFile)
+				.filter(File::isFile)
+				.forEach(f -> {
+					if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
+					LexerRunner.lex(f).stream()
+						.flatMap(List::stream)
+						.forEach(t -> counts.merge(t, 1, Integer::sum));
+				});
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
 			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))

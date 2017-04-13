@@ -282,7 +282,7 @@ public class CLI {
 	private static void train() {
 		if (arguments.length >= 5) {
 			File inDir = new File(getArg(TRAIN));
-			File outFile = new File(arguments[4]);
+			File outFile = new File(getArg(COUNTER));
 			if (!inDir.exists()) {
 				System.err.println("Source path for training does not exist: " + inDir);
 				return;
@@ -306,7 +306,7 @@ public class CLI {
 	private static void test() {
 		if (arguments.length >= 5) {
 			File inDir = new File(getArg(TEST));
-			File counterFile = new File(arguments[4]);
+			File counterFile = new File(getArg(COUNTER));
 			if (!inDir.exists()) {
 				System.err.println("Test path does not exist: " + inDir);
 			} else if (!counterFile.exists()) {
@@ -360,7 +360,7 @@ public class CLI {
 	private static void predict() {
 		if (arguments.length >= 3) {
 			File inDir = new File(getArg(TEST));
-			File counterFile = new File(arguments[2]);
+			File counterFile = new File(getArg(COUNTER));
 			if (!inDir.exists()) {
 				System.err.println("Test path does not exist: " + inDir);
 			} else if (!counterFile.exists()) {
