@@ -1,4 +1,4 @@
-package core.modeling.ngram;
+package slp.core.modeling.ngram;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -10,12 +10,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import core.counting.Counter;
-import core.counting.trie.TrieCounter;
-import core.modeling.AbstractModel;
-import core.modeling.ModelRunner;
-import core.sequencing.NGramSequencer;
-import core.util.Pair;
+import slp.core.counting.Counter;
+import slp.core.counting.trie.TrieCounter;
+import slp.core.modeling.AbstractModel;
+import slp.core.modeling.ModelRunner;
+import slp.core.sequencing.NGramSequencer;
+import slp.core.util.Pair;
 
 public abstract class NGramModel extends AbstractModel {
 
@@ -63,7 +63,7 @@ public abstract class NGramModel extends AbstractModel {
 	}
 
 	@Override
-	public Pair<Double, Double> modelToken(List<Integer> input, int index) {
+	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
 		Pair<Double, Double> res = Pair.of(0.0, 0.0);
 		for (int i = 0; i < sequence.size(); i++) {
@@ -78,7 +78,7 @@ public abstract class NGramModel extends AbstractModel {
 	}
 
 	@Override
-	public Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int index) {
+	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
 		Set<Integer> predictions = new HashSet<>();
 		int limit = ModelRunner.getPredictionCutoff();

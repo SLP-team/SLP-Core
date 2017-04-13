@@ -1,4 +1,4 @@
-package core.counting.trie;
+package slp.core.counting.trie;
 
 import java.util.List;
 

@@ -1,11 +1,11 @@
-package core.counting.io;
+package slp.core.counting.io;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
-import core.counting.Counter;
+import slp.core.counting.Counter;
 
 public class CountsWriter {
 

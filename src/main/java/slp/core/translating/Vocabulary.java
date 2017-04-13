@@ -1,4 +1,4 @@
-package core.translating;
+package slp.core.translating;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,8 +22,8 @@ import java.util.stream.Stream;
 public class Vocabulary {
 
 	public static final String UNK = "<UNK>";
-	public static final String SOL = "<SOL>";
-	public static final String EOL = "<EOL>";
+	public static final String BOS = "<s>";
+	public static final String EOS = "</s>";
 	
 	static Map<String, Integer> wordIndices = new HashMap<>();
 	static List<String> words = new ArrayList<>();

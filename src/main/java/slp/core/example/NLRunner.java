@@ -1,17 +1,17 @@
-package core.example;
+package slp.core.example;
 
 import java.io.File;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.stream.Stream;
 
-import core.lexing.LexerRunner;
-import core.lexing.simple.PunctuationLexer;
-import core.modeling.Model;
-import core.modeling.ModelRunner;
-import core.modeling.ngram.ADMModel;
-import core.translating.VocabularyRunner;
-import core.util.Pair;
+import slp.core.lexing.LexerRunner;
+import slp.core.lexing.simple.PunctuationLexer;
+import slp.core.modeling.Model;
+import slp.core.modeling.ModelRunner;
+import slp.core.modeling.ngram.ADMModel;
+import slp.core.translating.VocabularyRunner;
+import slp.core.util.Pair;
 
 public class NLRunner {
 	public static void main(String[] args) {

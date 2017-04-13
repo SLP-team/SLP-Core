@@ -1,11 +1,11 @@
-package core.sequencing;
+package slp.core.sequencing;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.modeling.ModelRunner;
+import slp.core.modeling.ModelRunner;
 
 public class NGramSequencer {
 

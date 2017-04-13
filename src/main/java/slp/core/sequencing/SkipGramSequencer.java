@@ -1,9 +1,9 @@
-package core.sequencing;
+package slp.core.sequencing;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import core.modeling.ModelRunner;
+import slp.core.modeling.ModelRunner;
 
 /**
  * Work in progress, no guarantees of functionality yet.

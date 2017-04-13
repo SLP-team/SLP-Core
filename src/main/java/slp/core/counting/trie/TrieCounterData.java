@@ -1,9 +1,9 @@
-package core.counting.trie;
+package slp.core.counting.trie;
 
 import java.util.Arrays;
 import java.util.List;
 
-import core.modeling.ModelRunner;
+import slp.core.modeling.ModelRunner;
 
 public class TrieCounterData {
 	/**
@@ -25,39 +25,42 @@ public class TrieCounterData {
 		Arrays.fill(this.indices, Integer.MAX_VALUE);
 	}
 
-	void updateSuccessor(List<Integer> indices, int index, boolean count, Integer key, Object succ) {
-		if (succ instanceof TrieCounter) updateTrie(indices, index, count, key, succ);
-		else updateArray(indices, index, count, key, succ);
+	void updateSuccessor(List<Integer> indices, int index, boolean count, Object succ) {
+		if (succ instanceof TrieCounter) updateTrie(indices, index, count, succ);
+		else updateArray(indices, index, count, succ);
 	}
 
-	private void updateTrie(List<Integer> indices, int index, boolean count, Integer key, Object succ) {
+	private void updateTrie(List<Integer> indices, int index, boolean count, Object succ) {
 		TrieCounter next = (TrieCounter) succ;
 		next.update(indices, index + 1, count);
 		updateCoCs(next.getCount(), count);
 		if (next.getCount() == 0) {
-			removeSucc(key);
+			removeSucc(indices.get(index));
 		}
 	}
 
-	private void updateArray(List<Integer> indices, int index, boolean count, Integer key, Object succ) {
+	private void updateArray(List<Integer> indices, int index, boolean count, Object succ) {
 		int[] successor = (int[]) succ;
 		boolean valid = ArrayStorage.checkExactSequence(indices, index, successor);
-		if (valid) updateArrayCount(indices, index, count, key, successor);
-		else promoteArrayToTrie(indices, index, count, key, successor);
+		if (valid) updateArrayCount(indices, index, count, successor);
+		else {
+			TrieCounter newNext = promoteArrayToTrie(indices, index, count, successor);
+			updateTrie(indices, index, count, newNext);
+		}
 	}
 
-	private void updateArrayCount(List<Integer> indices, int index, boolean count, Integer key, int[] successor) {
+	private void updateArrayCount(List<Integer> indices, int index, boolean count, int[] successor) {
 		successor[0] += (count ? 1 : -1);
 		updateCoCs(successor[0], count);
 		if (successor[0] == 0) {
-			removeSucc(key);
+			removeSucc(indices.get(index));
 		}
 		for (int i = index + 1; i <= indices.size(); i++) {
 			this.updateNCounts(i, successor[0], count);
 		}
 	}
 
-	private void promoteArrayToTrie(List<Integer> indices, int index, boolean count, Integer key, int[] successor) {
+	private TrieCounter promoteArrayToTrie(List<Integer> indices, int index, boolean count, int[] successor) {
 		if (!count) System.err.println("Attempting to unsee never seen event");
 		TrieCounter newNext = new TrieCounter(1);
 		newNext.setCount(successor[0]);
@@ -68,13 +71,13 @@ public class TrieCounterData {
 			newNext.data.putSucc(successor[1], temp);
 			if (COUNT_OF_COUNTS_CUTOFF > 0) newNext.data.counts[1 + Math.min(temp[0], COUNT_OF_COUNTS_CUTOFF)]++;
 		}
-		putSucc(key, newNext);
-		updateTrie(indices, index, count, key, newNext);
+		putSucc(indices.get(index), newNext);
+		return newNext;
 	}
 
-	void addSucessor(List<Integer> indices, int index, boolean count, Integer key) {
+	void addSucessor(List<Integer> indices, int index, boolean count) {
 		if (!count) {
-			System.out.println("Attempting to unsee never seen event: " + key + "\t" + indices.subList(index, indices.size()));
+			System.out.println("Attempting to unsee never seen event: " + indices.subList(index, indices.size()));
 			return;
 		}
 		int[] singleton = new int[indices.size() - index];
@@ -82,7 +85,7 @@ public class TrieCounterData {
 		for (int i = 1; i < singleton.length; i++) {
 			singleton[i] = indices.get(index + i);
 		}
-		putSucc(key, singleton);
+		putSucc(indices.get(index), singleton);
 		updateCoCs(1, count);
 		for (int i = index + 1; i <= indices.size(); i++) {
 			this.updateNCounts(i, 1, count);

@@ -1,4 +1,4 @@
-package core.modeling.ngram;
+package slp.core.modeling.ngram;
 
 import java.io.File;
 import java.util.ArrayDeque;
@@ -6,10 +6,10 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
-import core.modeling.AbstractModel;
-import core.modeling.ModelRunner;
-import core.sequencing.NGramSequencer;
-import core.util.Pair;
+import slp.core.modeling.AbstractModel;
+import slp.core.modeling.ModelRunner;
+import slp.core.sequencing.NGramSequencer;
+import slp.core.util.Pair;
 
 public class NGramCache extends AbstractModel {
 
@@ -56,12 +56,12 @@ public class NGramCache extends AbstractModel {
 	public void forgetToken(List<Integer> input, int index) { }
 
 	@Override
-	public Pair<Double, Double> modelToken(List<Integer> input, int index) {
+	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
 		return this.model.modelToken(input, index);
 	}
 
 	@Override
-	public Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int index) {
+	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		return this.model.predictToken(input, index);
 	}
 }

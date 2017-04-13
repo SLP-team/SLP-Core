@@ -1,4 +1,4 @@
-package core;
+package slp.core;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -9,32 +9,32 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import core.counting.Counter;
-import core.counting.io.CountsReader;
-import core.counting.io.CountsWriter;
-import core.counting.trie.TrieCounter;
-import core.counting.trie.TrieCounterData;
-import core.example.JavaRunner;
-import core.example.NLRunner;
-import core.lexing.Lexer;
-import core.lexing.LexerRunner;
-import core.lexing.code.JavaLexer;
-import core.lexing.simple.CharacterLexer;
-import core.lexing.simple.PunctuationLexer;
-import core.lexing.simple.TokenizedLexer;
-import core.lexing.simple.WhitespaceLexer;
-import core.modeling.Model;
-import core.modeling.ModelRunner;
-import core.modeling.mix.InverseMixModel;
-import core.modeling.mix.NestedModel;
-import core.modeling.ngram.ADMModel;
-import core.modeling.ngram.ADModel;
-import core.modeling.ngram.JMModel;
-import core.modeling.ngram.NGramCache;
-import core.modeling.ngram.NGramModel;
-import core.modeling.ngram.WBModel;
-import core.translating.Vocabulary;
-import core.translating.VocabularyRunner;
+import slp.core.counting.Counter;
+import slp.core.counting.io.CountsReader;
+import slp.core.counting.io.CountsWriter;
+import slp.core.counting.trie.TrieCounter;
+import slp.core.counting.trie.TrieCounterData;
+import slp.core.example.JavaRunner;
+import slp.core.example.NLRunner;
+import slp.core.lexing.Lexer;
+import slp.core.lexing.LexerRunner;
+import slp.core.lexing.code.JavaLexer;
+import slp.core.lexing.simple.CharacterLexer;
+import slp.core.lexing.simple.PunctuationLexer;
+import slp.core.lexing.simple.TokenizedLexer;
+import slp.core.lexing.simple.WhitespaceLexer;
+import slp.core.modeling.Model;
+import slp.core.modeling.ModelRunner;
+import slp.core.modeling.mix.InverseMixModel;
+import slp.core.modeling.mix.NestedModel;
+import slp.core.modeling.ngram.ADMModel;
+import slp.core.modeling.ngram.ADModel;
+import slp.core.modeling.ngram.JMModel;
+import slp.core.modeling.ngram.NGramCache;
+import slp.core.modeling.ngram.NGramModel;
+import slp.core.modeling.ngram.WBModel;
+import slp.core.translating.Vocabulary;
+import slp.core.translating.VocabularyRunner;
 
 /**
  * Provides a command line interface to a runnable jar produced from this source code.
@@ -56,7 +56,7 @@ public class CLI {
 	private static final String PER_LINE = "(-pl|--per-line)";
 	private static final String EXTENSION = "(-e|--extension)";
 
-	// Vocabulary options
+	// Vocabulary options	
 	private static final String VOCABULARY = "(-v|--vocabulary)";
 	private static final String CLOSED = "--closed";
 	private static final String UNK_CUTOFF = "(-u|--unk-cutoff)";
@@ -69,6 +69,7 @@ public class CLI {
 	private static final String TEST = "(-te|--test)";
 	private static final String COUNTER = "--counter";
 	private static final String MODEL = "(-m|--model)";
+	private static final String SELF = "(-s|--self)";
 	private static final String CACHE = "(-c|--cache)";
 	private static final String DYNAMIC = "(-d|--dynamic)";
 	private static final String NESTED = "(-n|--nested)";
@@ -76,16 +77,6 @@ public class CLI {
 	private static String[] arguments;
 	
 	public static void main(String[] args) {
-		args = new String[] { "vocabulary", "E:/Java/Tiny", "E:/Java/Tiny/train.vocab", "-l=java", "--delims", "-e=java" };
-		args = new String[] { "lex", "E:/Java/Corpus", "E:/Java/Corpus-T", "-l=java", "--delims" };
-		args = new String[] { "lex", "E:/Java/Tiny/Test", "E:/Java/Tiny/Test-T", "-v=E:/Java/Tiny/train.vocab", "-l=java", "--delims" };
-		args = new String[] { "train", "--train=E:/Java/Tiny/Train", "E:/Java/Tiny/train.counts", "-v=E:/Java/Tiny/train.vocab",
-				"-l=java", "--delims" };
-		args = new String[] { "test", "--test=E:/Java/Tiny/Test", "--counter=E:/Java/Tiny/train.counts", "-v=E:/Java/Tiny/train.vocab",
-				"-l=java", "--delims", "-d" };
-		args = new String[] { "train-test", "--train=E:/Java/Tiny/Train", "--test=E:/Java/Tiny/Test",
-				"-l=java", "--delims", "-o=6", "-n", "-c", "" };
-		
 		arguments = args;
 		if (arguments.length == 0 || isSet(HELP)) {
 			if (arguments.length == 0) System.out.println("No arguments provided, printing help menu.");
@@ -140,24 +131,24 @@ public class CLI {
 		System.out.println("\t-h | --help (or no arguments): Print this help menu)");
 		System.out.println("\tlex <in-path> <out-path> [OPTIONS]: lex the in-path (file or directory) to a mirrored structure in out-path."
 				+ "\n\t\tSee lexing options below, for instance to specify extension filters, delimiter options.");
-		System.out.println("lex-ix <in-path> <out-path> [OPTIONS]: like lex, excepts translates tokens to integers."
+		System.out.println("\tlex-ix <in-path> <out-path> [OPTIONS]: like lex, excepts translates tokens to integers."
 				+ "\n\t\tNote: if not given a vocabulary, will build one first and write it to 'train.vocab' in same dir as out-path");
 		System.out.println("\tvocabulary <in-path> <out-file> [OPTIONS]: lex the in-path and write resulting vocabulary to out-file.");
-		System.out.println("\ttrain --train=<path> <out-file> [OPTIONS]: lex all files in in-path, train n-gram model and write to out-file."
+		System.out.println("\ttrain --train <path> --counter <out-file> [OPTIONS]: lex all files in in-path, train n-gram model and write to out-file."
 				+ "\n\t\tCurrently the Jar supports n-gram models only; config-file support may come in further revisions."
 				+ "\n\t\tNote: if not given a vocabulary, will build one first and write it to 'train.vocab' in same dir as out-file");
-		System.out.println("\ttest --test=<path> --counter=<counts-file> -v=<vocab-file> [OPTIONS]: test on files in in-path using counter from counts-file."
+		System.out.println("\ttest --test <path> --counter <counts-file> -v <vocab-file> [OPTIONS]: test on files in in-path using counter from counts-file."
 				+ "\n\t\tNote that the vocabulary parameter is mandatory; a counter is meaningless without a vocabulary."
 				+ "\n\t\tUse -m (below) to set the model. See also: predict, train-test.");
-		System.out.println("\ttrain-test --train=<path> --test=<path> [OPTIONS]: train on in-path and test modeling accuracy on out-path without storing a counter");
-		System.out.println("\tpredict --test=<path> --counter=<counts-file> [OPTIONS]: test predictions on files in in-path using counter from counts-file."
+		System.out.println("\ttrain-test --train <path> --test <path> [OPTIONS]: train on in-path and test modeling accuracy on out-path without storing a counter");
+		System.out.println("\tpredict --test <path> --counter <counts-file> [OPTIONS]: test predictions on files in in-path using counter from counts-file."
 				+ "\n\t\tUse -m (below) to set the model. See also: test, train-predict");
-		System.out.println("\ttrain-predict --train=<path> --test=<path> [OPTIONS]: train on in-path and test prediction accuracy on out-path without storing a counter");
+		System.out.println("\ttrain-predict --train <path> --test <path> [OPTIONS]: train on in-path and test prediction accuracy on out-path without storing a counter");
 		
 		System.out.println("\nOptions:");
 		System.out.println("  General:");
 		System.out.println("\t-h | --help: Show this screen");
-		System.out.println("\t--verbose=<file>: print all output to file");
+		System.out.println("\t--verbose <file>: print all output to file");
 		System.out.println("  Lexing:");
 		System.out.println("\t-l | --language: specify language for tokenization. Currently one of (simple, blank, tokens, java)."
 				+ "\n\t\t Use 'simple' (default) for splitting on punctuation (preserved as tokens) and whitespace (ignored);"
@@ -182,6 +173,7 @@ public class CLI {
 		System.out.println("\t--counter: the path to read the counter from, if testing with pre-trained model");
 		System.out.println("\t-m | --model: use specified n-gram smoothing model:"
 				+ "\n\t\tjm = Jelinek-Mercer, wb = Witten-Bell, ad(m) = (modified) absolute discounting");
+		System.out.println("\t-s | --self: specify that we are testing on the train data, implying to 'forget' any data prior to testing.");
 		System.out.println("\t-c | --cache: add an n-gram cache model");
 		System.out.println("\t-d | --dynamic: dynamically update all models with test data");
 		System.out.println("\t-n | --nested: build a nested model of test data (sets dynamic to false); see paper for more details");
@@ -211,6 +203,7 @@ public class CLI {
 	private static void setupModelRunner() {
 		if (isSet(PER_LINE)) ModelRunner.perLine(true);
 		if (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST))) ModelRunner.selfTesting(true);
+		else if ((isSet(TRAIN) ^ isSet(TEST)) && isSet(SELF)) ModelRunner.selfTesting(true);
 	}
 
 	private static Model getModel() {
@@ -287,9 +280,9 @@ public class CLI {
 	}
 
 	private static void train() {
-		if (arguments.length >= 3) {
+		if (arguments.length >= 5) {
 			File inDir = new File(getArg(TRAIN));
-			File outFile = new File(arguments[2]);
+			File outFile = new File(arguments[4]);
 			if (!inDir.exists()) {
 				System.err.println("Source path for training does not exist: " + inDir);
 				return;
@@ -311,9 +304,9 @@ public class CLI {
 	}
 
 	private static void test() {
-		if (arguments.length >= 3) {
+		if (arguments.length >= 5) {
 			File inDir = new File(getArg(TEST));
-			File counterFile = new File(arguments[2]);
+			File counterFile = new File(arguments[4]);
 			if (!inDir.exists()) {
 				System.err.println("Test path does not exist: " + inDir);
 			} else if (!counterFile.exists()) {
@@ -421,7 +414,6 @@ public class CLI {
 	static boolean isSet(String arg) {
 		for (String a : arguments) {
 			if (a.matches(arg)) return true;
-			else if (a.contains("=") && a.substring(0, a.indexOf("=")).matches(arg)) return true;
 		}
 		return false;
 	}
@@ -429,10 +421,10 @@ public class CLI {
 	static String getArg(String arg) {
 		for (int i = 1; i < arguments.length; i++) {
 			String a = arguments[i];
-			if (a.contains("=") && a.substring(0, a.indexOf("=")).matches(arg)) {
-				return a.substring(a.indexOf("=") + 1);
+			if (a.matches(arg)) {
+				if (i < arguments.length - 1) return arguments[i + 1];
+				return "";
 			}
-			else if (a.matches(arg)) return "";
 		}
 		return null;
 	}

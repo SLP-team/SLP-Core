@@ -1,4 +1,4 @@
-package core.translating;
+package slp.core.translating;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,9 +12,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import core.io.Reader;
-import core.lexing.LexerRunner;
-import core.util.Util;
+import slp.core.io.Reader;
+import slp.core.lexing.LexerRunner;
+import slp.core.util.Util;
 
 public class VocabularyRunner {
 	

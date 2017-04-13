@@ -1,10 +1,10 @@
-package core.counting;
+package slp.core.counting;
 
 import java.io.Externalizable;
 import java.util.List;
 
-import core.counting.trie.TrieCounter;
-import core.modeling.ngram.NGramModel;
+import slp.core.counting.trie.TrieCounter;
+import slp.core.modeling.ngram.NGramModel;
 
 /**
  * Interface for counter implementations that can be used by count-based models,

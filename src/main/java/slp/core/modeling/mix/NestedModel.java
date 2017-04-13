@@ -1,4 +1,4 @@
-package core.modeling.mix;
+package slp.core.modeling.mix;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6,16 +6,16 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import core.modeling.AbstractModel;
-import core.modeling.Model;
-import core.modeling.ModelRunner;
-import core.modeling.ngram.NGramModel;
-import core.util.Pair;
+import slp.core.modeling.AbstractModel;
+import slp.core.modeling.Model;
+import slp.core.modeling.ModelRunner;
+import slp.core.modeling.ngram.NGramModel;
+import slp.core.util.Pair;
 
 public class NestedModel extends AbstractModel {
 
 	private Model global;
-	private List<NGramModel> models;
+	private List<Model> models;
 	private List<File> files;
 	
 	private Model mixed;
@@ -26,16 +26,26 @@ public class NestedModel extends AbstractModel {
 		this.files = new ArrayList<>();
 		this.models = new ArrayList<>();
 		
-		NGramModel local = NGramModel.standard();
+		Model local = fromGlobal();
 		ModelRunner.learn(local, testRoot);
 		this.files.add(testRoot);
 		this.models.add(local);
 		this.mixed = makeMix();
 	}
-	
+
+	private Model fromGlobal() {
+		try {
+			return global.getClass().newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			e.printStackTrace();
+			return NGramModel.standard();
+		}
+	}
+
 	@Override
 	public void notify(File next) {
 		List<File> lineage = getLineage(next);
+		if (lineage == null) return;
 		// If lineage is empty, the current model is the (first meaningful) parent of next and is appropriate
 		if (lineage.isEmpty()) return;
 		int pos = 1;
@@ -49,7 +59,7 @@ public class NestedModel extends AbstractModel {
 		}
 		for (int i = pos; i < lineage.size(); i++) {
 			File file = lineage.get(i);
-			NGramModel model = NGramModel.standard();
+			Model model = fromGlobal();
 			this.files.add(file);
 			this.models.add(model);
 			ModelRunner.learn(model, file);
@@ -58,6 +68,7 @@ public class NestedModel extends AbstractModel {
 		this.files.add(next);
 		ModelRunner.forget(this.models.get(this.models.size() - 1), next);
 		this.mixed = makeMix();
+		this.mixed.notify(next);
 	}
 
 	/**
@@ -75,6 +86,7 @@ public class NestedModel extends AbstractModel {
 				lineage.add(file.getParentFile());
 			}
 			file = file.getParentFile();
+			if (file.getParentFile() == null) return null;
 		}
 		lineage.add(this.files.get(0));
 		Collections.reverse(lineage);
@@ -94,12 +106,12 @@ public class NestedModel extends AbstractModel {
 	}
 
 	@Override
-	public Pair<Double, Double> modelToken(List<Integer> input, int index) {
+	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
 		return this.mixed.modelToken(input, index);
 	}
 
 	@Override
-	public Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int index) {
+	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		return this.mixed.predictToken(input, index);
 	}
 

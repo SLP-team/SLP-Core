@@ -1,4 +1,4 @@
-package core.lexing.code;
+package slp.core.lexing.code;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,7 +15,7 @@ import org.eclipse.jdt.core.compiler.IScanner;
 import org.eclipse.jdt.core.compiler.ITerminalSymbols;
 import org.eclipse.jdt.core.compiler.InvalidInputException;
 
-import core.lexing.Lexer;
+import slp.core.lexing.Lexer;
 
 public class JavaLexer implements Lexer {
 
@@ -28,7 +28,10 @@ public class JavaLexer implements Lexer {
 	public List<List<String>> tokenizeLines(String text) {
 		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.4", "1.5");
 		String temp = filterUnTokenizable(text);
-		if (temp != null) text = temp;
+		while (temp != null) {
+			text = temp;
+			temp = filterUnTokenizable(text);
+		}
 		
 		scanner.setSource(text.toCharArray());
 		List<List<String>> lineTokens = new ArrayList<>();
@@ -52,10 +55,14 @@ public class JavaLexer implements Lexer {
 			if (val.length() >= 15 && val.startsWith("\"")) {
 				val = "\"\"";
 			}
-			if (val.startsWith("\"") && val.endsWith("\"")) {
-				val = val.replaceAll("\n", "\\n");
-				val = val.replaceAll("\r", "\\r");
-				val = val.replaceAll("\t", "\\t");
+			if (val.startsWith("\"") && val.endsWith("\"") && val.length() > 2) {
+				String body = val.substring(1, val.length() - 1);
+				body = body.replaceAll("\\\\", "\\\\\\\\");
+				body = body.replaceAll("\"", "\\\\\"");
+				body = body.replaceAll("\n", "\\n");
+				body = body.replaceAll("\r", "\\r");
+				body = body.replaceAll("\t", "\\t");
+				val = "\"" + body + "\"";
 			}
 			else if (val.startsWith("\'") && val.endsWith("\'")) {
 				val = val.replaceAll("\n", "\\n");
@@ -68,10 +75,11 @@ public class JavaLexer implements Lexer {
 				for (int i = tokens.size() - 1; i >= 0; i--) {
 					String token = tokens.get(i);
 					if (token.matches("[,\\.\\?\\[\\]]") || Character.isUpperCase(token.charAt(0))
-							|| token.equals("extends") || token.equals("super")) {
+							|| token.equals("extends") || token.equals("super")
+							|| token.matches("(byte|short|int|long|float|double)")) {
 						continue;
 					}
-					else if (token.equals("<")) {
+					else if (token.matches("(<|>)+")) {
 						split = true;
 						break;
 					}

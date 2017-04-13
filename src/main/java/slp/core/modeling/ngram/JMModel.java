@@ -1,9 +1,9 @@
-package core.modeling.ngram;
+package slp.core.modeling.ngram;
 
 import java.util.List;
 
-import core.counting.Counter;
-import core.util.Pair;
+import slp.core.counting.Counter;
+import slp.core.util.Pair;
 
 public class JMModel extends NGramModel {
 

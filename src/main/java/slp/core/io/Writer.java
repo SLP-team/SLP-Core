@@ -1,4 +1,4 @@
-package core.io;
+package slp.core.io;
 
 import java.io.BufferedWriter;
 import java.io.File;

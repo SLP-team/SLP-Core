@@ -1,4 +1,4 @@
-package core.modeling;
+package slp.core.modeling;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,9 +10,9 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import core.lexing.LexerRunner;
-import core.translating.Vocabulary;
-import core.util.Pair;
+import slp.core.lexing.LexerRunner;
+import slp.core.translating.Vocabulary;
+import slp.core.util.Pair;
 
 /**
  * The ModelRunner class provides the third step in modeling (after lexing, translating).
@@ -24,7 +24,7 @@ import core.util.Pair;
 public class ModelRunner {
 	
 	private static final double NEG_LOG_2 = -Math.log(2);
-	private static boolean useLines = false;
+	private static boolean perLine = false;
 	private static boolean selfTesting = false;
 	
 	private static int ngramOrder = 6;
@@ -40,14 +40,29 @@ public class ModelRunner {
 	 * @param perLine 
 	 */
 	public static void perLine(boolean perLine) {
-		ModelRunner.useLines = perLine;
+		ModelRunner.perLine = perLine;
 	}
 	
 	/**
-	 * Indicate that we are testing on the training set, which means we must un-count any files prior to modeling them.
+	 * Returns whether or not this class will model each line in isolation.
+	 */
+	public static boolean isPerLine() {
+		return ModelRunner.perLine;
+	}
+	
+	/**
+	 * Indicate that we are testing on the training set,
+	 * which means we must 'forget' any files prior to modeling them and re-learn them afterwards.
 	 */
 	public static void selfTesting(boolean selfTesting) {
 		ModelRunner.selfTesting = selfTesting;
+	}
+	
+	/**
+	 * Returns whether or not the model is set up to run self-testing (training on test-set)
+	 */
+	public static boolean isSelfTesting() {
+		return ModelRunner.selfTesting;
 	}
 	
 	/**
@@ -91,10 +106,11 @@ public class ModelRunner {
 				.map(Path::toFile)
 				.filter(File::isFile)
 				.forEach(f -> {
+					model.notify(f);
 					if (++count[0] % 1000 == 0) {
 						System.out.println("Counting at file " + count[0] + ", tokens processed: " + count[1]);
 					}
-					if (useLines) {
+					if (perLine) {
 						LexerRunner.lex(f).stream()
 							.peek(l -> count[1] += l.size())
 							.map(List::stream)
@@ -121,7 +137,8 @@ public class ModelRunner {
 				.map(Path::toFile)
 				.filter(File::isFile)
 				.forEach(f -> {
-					if (useLines) {
+					model.notify(f);
+					if (perLine) {
 						LexerRunner.lex(f)
 							.stream().map(List::stream)
 							.map(Vocabulary::toIndices)
@@ -157,7 +174,7 @@ public class ModelRunner {
 						.peek(l -> count[1] += l.size())
 						.map(List::stream)
 						.map(Vocabulary::toIndices);
-					List<Double> modeled = !useLines ? modelSequence(model, lines.flatMap(l -> l).collect(Collectors.toList()))
+					List<Double> modeled = !perLine ? modelSequence(model, lines.flatMap(l -> l).collect(Collectors.toList()))
 													 : lines.map(l -> l.collect(Collectors.toList()))
 															.flatMap(l -> modelSequence(model, l).stream())
 															.collect(Collectors.toList());
@@ -198,7 +215,7 @@ public class ModelRunner {
 						.peek(l -> count[1] += l.size())
 						.map(List::stream)
 						.map(Vocabulary::toIndices);
-					List<Double> modeled = !useLines ? predictSequence(model, lines.flatMap(l -> l).collect(Collectors.toList()))
+					List<Double> modeled = !perLine ? predictSequence(model, lines.flatMap(l -> l).collect(Collectors.toList()))
 													 : lines.map(l -> l.collect(Collectors.toList()))
 															.flatMap(l -> predictSequence(model, l).stream())
 															.collect(Collectors.toList());

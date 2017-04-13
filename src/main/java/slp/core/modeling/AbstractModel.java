@@ -1,13 +1,11 @@
-package core.modeling;
+package slp.core.modeling;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
-import core.modeling.mix.MixModel;
-import core.modeling.ngram.NGramModel;
-import core.util.Pair;
+import slp.core.modeling.mix.MixModel;
+import slp.core.modeling.ngram.NGramModel;
+import slp.core.util.Pair;
 
 /**
  * Implementation of {@link core.mode.Model} interface that serves as base class for most models.<br />
@@ -31,32 +29,30 @@ public abstract class AbstractModel implements Model {
 	}
 
 	/**
-	 * Default implementation of {@link #model(List)},
-	 * which invokes {@link #modelToken(List, int)} at each index and takes care of dynamic updating after each token.
-	 * Can be overriden in favor of batch processing by underlying class if preferable.
+	 * Default implementation of {@link #modelToken(List, int)},
+	 * which invokes {@link #modelAtIndex(List, int)} at each index and takes care of dynamic updating after each token.
 	 */
-	public final List<Pair<Double, Double>> model(List<Integer> input) {
-		return IntStream.range(0, input.size()).mapToObj(i -> {
-			Pair<Double, Double> modeled = modelToken(input, i);
-			if (this.dynamic) this.learnToken(input, i);
-			return modeled;
-		}).collect(Collectors.toList());
+	public final Pair<Double, Double> modelToken(List<Integer> input, int i) {
+		Pair<Double, Double> modeled = modelAtIndex(input, i);
+		if (this.dynamic) this.learnToken(input, i);
+		return modeled;
 	}
 	
+	public abstract Pair<Double, Double> modelAtIndex(List<Integer> input, int i);
+	
 	/**
-	 * Default implementation of {@link #model(List)},
-	 * which invokes {@link #modelToken(List, int)} at each index and takes care of dynamic updating after each token.
-	 * Can be overriden in favor of batch processing by underlying class if preferable.
+	 * Default implementation of {@link #predictToken(List, int)},
+	 * which invokes {@link #predictAtIndex(List, int)} at each index and takes care of dynamic updating for each token.
 	 */
-	public final List<Map<Integer, Pair<Double, Double>>> predict(List<Integer> input) {
+	public final Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int i) {
 		boolean temp = this.dynamic;
 		this.setDynamic(false);
-		List<Map<Integer, Pair<Double, Double>>> res = IntStream.range(0, input.size()).mapToObj(i -> {
-			Map<Integer, Pair<Double, Double>> predictions = predictToken(input, i);
-			if (temp) this.learnToken(input, i);
-			return predictions;
-		}).collect(Collectors.toList());
+		Map<Integer, Pair<Double, Double>> predictions = predictAtIndex(input, i);
 		this.setDynamic(temp);
-		return res;
+		if (this.dynamic) this.learnToken(input, i);
+		return predictions;
 	}
+	
+	public abstract Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int i);
+
 }

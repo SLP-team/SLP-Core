@@ -1,4 +1,4 @@
-package core.modeling;
+package slp.core.modeling;
 
 import java.io.File;
 import java.util.List;
@@ -6,10 +6,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import core.modeling.mix.MixModel;
-import core.modeling.mix.NestedModel;
-import core.modeling.ngram.NGramModel;
-import core.util.Pair;
+import slp.core.modeling.mix.MixModel;
+import slp.core.modeling.mix.NestedModel;
+import slp.core.modeling.ngram.NGramModel;
+import slp.core.util.Pair;
 
 /**
  * Interface for models, providing the third step after lexing and translating.
@@ -103,7 +103,8 @@ public interface Model {
 	 * Model each token in input to a pair of probability/confidence (see {@link #modelToken(List, int)}.
 	 * <br />
 	 * The default implementation simply invokes {@link #modelToken(List, int)} for each index;
-	 * {@link AbstractModel} overrides this with dynamic updating support.
+	 * can be overriden in favor of batch processing by underlying class if preferable
+	 * (but remember to implement dynamic updating or caches won't work).
 	 * 
 	 * @param input Lexed and translated input tokens (use {@code Vocabulary} to translate back if needed)
 	 * 
@@ -119,6 +120,8 @@ public interface Model {
 	 * Model a single token in {@code input} at index {@code index} to a pair of (probability, confidence) &isin; ([0,1], [0,1])
 	 * The probability must be a valid probability, positive and summing to 1 given the context.
 	 * <br />
+	 * {@link AbstractModel} implements this with dynamic updating support.
+	 * <br />
 	 * Since some models implement faster "batch" processing, {@link #model(List)} 
 	 * should generally be called if possible.
 	 * 
@@ -133,7 +136,8 @@ public interface Model {
 	 * Give top <code>N</code> predictions for each token in input with probability/confidence scores (see {@link #modelToken(List, int)}.
 	 * <br />
 	 * The default implementation simply invokes {@link #predictToken(List, int)} for each index;
-	 * {@link AbstractModel} overrides this with dynamic updating support.
+	 * can be overriden in favor of batch processing by underlying class if preferable
+	 * (but remember to implement dynamic updating or caches won't work).
 	 * 
 	 * @param input Lexed and translated input tokens (use {@code Vocabulary} to translate back if needed)
 	 * @return Probability/Confidence-weighted set of predictions for each token in input
@@ -147,6 +151,9 @@ public interface Model {
 	/**
 	 * Give top <code>N</code> predictions for position {@code index} in input,
 	 * with corresponding probability/confidence scores as in {@link #modelToken(List, int)}.
+	 * <br />
+	 * {@link AbstractModel} implements this with dynamic updating support.
+	 * <br />
 	 * The model should produce suggestions for the token that should appear
 	 * following the first {@code index} tokens in {@code input}, regardless of what token is presently there
 	 * if any (e.g. it could be an insertion task).

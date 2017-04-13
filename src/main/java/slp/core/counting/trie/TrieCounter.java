@@ -1,4 +1,4 @@
-package core.counting.trie;
+package slp.core.counting.trie;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -8,8 +8,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import core.counting.Counter;
-import core.util.Pair;
+import slp.core.counting.Counter;
+import slp.core.util.Pair;
 
 public class TrieCounter implements Counter {
 
@@ -200,8 +200,8 @@ public class TrieCounter implements Counter {
 		if (index < indices.size()) {
 			Integer key = indices.get(index);
 			Object successor = this.data.getSuccessor(key);
-			if (successor != null) this.data.updateSuccessor(indices, index, count, key, successor);
-			else this.data.addSucessor(indices, index, count, key);
+			if (successor != null) this.data.updateSuccessor(indices, index, count, successor);
+			else this.data.addSucessor(indices, index, count);
 		}
 		this.data.updateCount(count, index == indices.size());
 		this.data.updateNCounts(index, this.getCount(), count);

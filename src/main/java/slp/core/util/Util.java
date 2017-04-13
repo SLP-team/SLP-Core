@@ -1,4 +1,4 @@
-package core.util;
+package slp.core.util;
 
 import java.io.File;
 import java.util.ArrayList;

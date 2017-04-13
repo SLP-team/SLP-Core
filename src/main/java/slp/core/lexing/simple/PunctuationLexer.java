@@ -1,11 +1,11 @@
-package core.lexing.simple;
+package slp.core.lexing.simple;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
-import core.lexing.Lexer;
+import slp.core.lexing.Lexer;
 
 public class PunctuationLexer implements Lexer {
 

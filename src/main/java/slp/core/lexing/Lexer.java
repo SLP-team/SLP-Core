@@ -1,4 +1,4 @@
-package core.lexing;
+package slp.core.lexing;
 
 import java.util.List;
 import java.util.stream.Stream;

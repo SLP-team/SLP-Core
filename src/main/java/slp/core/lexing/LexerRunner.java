@@ -1,4 +1,4 @@
-package core.lexing;
+package slp.core.lexing;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,10 +6,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import core.io.Reader;
-import core.io.Writer;
-import core.lexing.simple.PunctuationLexer;
-import core.translating.Vocabulary;
+import slp.core.io.Reader;
+import slp.core.io.Writer;
+import slp.core.lexing.simple.PunctuationLexer;
+import slp.core.translating.Vocabulary;
 
 /**
  * The LexerRunner is the starting point of any modeling code,
@@ -34,6 +34,13 @@ public class LexerRunner {
 	public static void setLexer(Lexer lexer) {
 		LexerRunner.lexer = lexer;
 	}
+	
+	/**
+	 * Returns the lexer currently used by this class
+	 */
+	public static Lexer getLexer() {
+		return LexerRunner.lexer;
+	}
 
 	/**
 	 * Enforce adding delimiters to text to lex (i.e. "&lt;SOL"&gt;", ""&lt;EOL"&gt;"; see {@link Vocabulary}) if not present.
@@ -49,18 +56,32 @@ public class LexerRunner {
 	}
 	
 	/**
+	 * Returns whether or not file/line (depending on {@code perLine}) delimimters are added.
+	 */
+	public static boolean addsDelimiters() {
+		return LexerRunner.delimiters;
+	}
+	
+	/**
 	 * Enforce lexing each line separately. This only has effect is {@link #useDelimiters()} is set,
 	 * in which case this method prepends delimiters on each line rather than the full content.
 	 */
 	public static void perLine(boolean perLine) {
 		LexerRunner.perLine = perLine;
 	}
+	
+	/**
+	 * Returns whether lexing adds delimiters per line.
+	 */
+	public static boolean isPerLine() {
+		return LexerRunner.perLine;
+	}
 
 	/**
 	 * Convenience method that translates tokens to indices after lexing before writing to file (default: no translation).
 	 * <br />
 	 * <em>Note:</em> you should either initialize the vocabulary yourself or write it to file afterwards
-	 * (as {@link core.CLI} does) or the resulting indices are (mostly) meaningless.
+	 * (as {@link slp.core.CLI} does) or the resulting indices are (mostly) meaningless.
 	 */
 	public static void preTranslate(boolean preTranslate) {
 		LexerRunner.translate = preTranslate;
@@ -87,6 +108,13 @@ public class LexerRunner {
 	}
 	
 	/**
+	 * Returns the regex currently used to filter input files to lex.
+	 */
+	public static String getRegex() {
+		return LexerRunner.regex;
+	}
+	
+	/**
 	 * Lex the provided file to a stream of tokens per line.
 	 * <br />
 	 * <em>Note:</em> returns empty stream if the file does not match this builder's regex
@@ -99,7 +127,7 @@ public class LexerRunner {
 	}
 	
 	/**
-	 * Lex the provided lines (see {@link core.io.Reader}) to a stream of tokens per line, possibly adding delimiters
+	 * Lex the provided lines (see {@link slp.core.io.Reader}) to a stream of tokens per line, possibly adding delimiters
 	 * @param lines Lines to lex
 	 * @return A Stream of lines containing a Stream of tokens each
 	 */
@@ -128,28 +156,30 @@ public class LexerRunner {
 	}
 
 	private static void padStart(List<String> line) {
+		String start = Vocabulary.BOS;
 		if (translate) {
-			if (!Vocabulary.toWord(Integer.parseInt(line.get(0))).equals(Vocabulary.SOL)) {
-				line.add(0, ""+Vocabulary.toIndex(Vocabulary.SOL));
+			if (!Vocabulary.toWord(Integer.parseInt(line.get(0))).equals(start)) {
+				line.add(0, ""+Vocabulary.toIndex(start));
 			}
 		}
 		else if (!translate) {
-			if (!line.get(0).equals(Vocabulary.SOL)) {
-				line.add(0, Vocabulary.SOL);
+			if (!line.get(0).equals(start)) {
+				line.add(0, start);
 			}
 		}
 	}
 
 	private static void padEnd(List<String> line) {
 		String last = line.get(line.size() - 1);
+		String end = Vocabulary.EOS;
 		if (translate) {
-			if (!Vocabulary.toWord(Integer.parseInt(last)).equals(Vocabulary.EOL)) {
-				line.add(""+Vocabulary.toIndex(Vocabulary.EOL));
+			if (!Vocabulary.toWord(Integer.parseInt(last)).equals(end)) {
+				line.add(""+Vocabulary.toIndex(end));
 			}
 		}
 		else if (!translate) {
-			if (!last.equals(Vocabulary.EOL)) {
-				line.add(Vocabulary.EOL);
+			if (!last.equals(end)) {
+				line.add(end);
 			}
 		}
 	}

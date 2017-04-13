@@ -1,20 +1,20 @@
-package core.example;
+package slp.core.example;
 
 import java.io.File;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.stream.Stream;
 
-import core.lexing.LexerRunner;
-import core.lexing.code.JavaLexer;
-import core.modeling.Model;
-import core.modeling.ModelRunner;
-import core.modeling.mix.InverseMixModel;
-import core.modeling.mix.NestedModel;
-import core.modeling.ngram.JMModel;
-import core.modeling.ngram.NGramCache;
-import core.translating.VocabularyRunner;
-import core.util.Pair;
+import slp.core.lexing.LexerRunner;
+import slp.core.lexing.code.JavaLexer;
+import slp.core.modeling.Model;
+import slp.core.modeling.ModelRunner;
+import slp.core.modeling.mix.InverseMixModel;
+import slp.core.modeling.mix.NestedModel;
+import slp.core.modeling.ngram.JMModel;
+import slp.core.modeling.ngram.NGramCache;
+import slp.core.translating.VocabularyRunner;
+import slp.core.util.Pair;
 
 public class JavaRunner {
 	public static void main(String[] args) {
@@ -67,6 +67,7 @@ public class JavaRunner {
 		//    f. Train this model on all files in 'train' recursively, using the usual updating mechanism (same as for dynamic updating).
 		//       - Note that this invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
 		//          other models may prefer to pre-train when calling the Model's constructor.
+		//       - Note that we could've invoked 'learn' before all the wrapping in this case
 		ModelRunner.learn(model, train);
 		
 		// 4. Running

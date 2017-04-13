@@ -1,9 +1,9 @@
-package core.modeling.mix;
+package slp.core.modeling.mix;
 
 import java.util.List;
 
-import core.modeling.Model;
-import core.util.Pair;
+import slp.core.modeling.Model;
+import slp.core.util.Pair;
 
 public class ProportionalMixModel extends MixModel {
 

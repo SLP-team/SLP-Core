@@ -1,4 +1,4 @@
-package core.util;
+package slp.core.util;
 
 public class Pair<T, V> {
 	public final T left;
