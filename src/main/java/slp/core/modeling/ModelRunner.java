@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -103,6 +104,7 @@ public class ModelRunner {
 		int[] count = { 0, 0 };
 		try {
 			Files.walk(file.toPath())
+				.filter(f -> count[0] < 250000)
 				.map(Path::toFile)
 				.filter(File::isFile)
 				.forEach(f -> {
@@ -157,7 +159,7 @@ public class ModelRunner {
 		}
 	}
 
-	public static Stream<Pair<File, List<Double>>> model(Model model, File file) {
+	public static Stream<Pair<File, List<List<Double>>>> model(Model model, File file) {
 		int[] count = { 0, 0 };
 		double[] ent = { 0.0 };
 		try {
@@ -170,7 +172,8 @@ public class ModelRunner {
 					}
 					model.notify(f);
 					Vocabulary.setCheckpoint();
-					Stream<Stream<Integer>> lines = LexerRunner.lex(f).stream()
+					List<List<String>> lexed = LexerRunner.lex(f);
+					Stream<Stream<Integer>> lines = lexed.stream()
 						.peek(l -> count[1] += l.size())
 						.map(List::stream)
 						.map(Vocabulary::toIndices);
@@ -178,16 +181,17 @@ public class ModelRunner {
 													 : lines.map(l -> l.collect(Collectors.toList()))
 															.flatMap(l -> modelSequence(model, l).stream())
 															.collect(Collectors.toList());
+					List<List<Double>> perLine = toLines(lexed, modeled);
 					ent[0] += modeled.stream().mapToDouble(m -> m).sum();
 					Vocabulary.restoreCheckpoint();
-					return Pair.of(f, modeled);
+					return Pair.of(f, perLine);
 				});
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
-	
+
 	private static List<Double> modelSequence(Model model, List<Integer> tokens) {
 		if (selfTesting) model.forget(tokens);
 		List<Double> probabilities = model.model(tokens).stream()
@@ -198,7 +202,7 @@ public class ModelRunner {
 		return probabilities;
 	}
 
-	public static Stream<Pair<File, List<Double>>> predict(Model model, File file) {
+	public static Stream<Pair<File, List<List<Double>>>> predict(Model model, File file) {
 		int[] count = { 0, 0 };
 		double[] mrr = { 0.0 };
 		try {
@@ -211,7 +215,8 @@ public class ModelRunner {
 					}
 					model.notify(f);
 					Vocabulary.setCheckpoint();
-					Stream<Stream<Integer>> lines = LexerRunner.lex(f).stream()
+					List<List<String>> lexed = LexerRunner.lex(f);
+					Stream<Stream<Integer>> lines = lexed.stream()
 						.peek(l -> count[1] += l.size())
 						.map(List::stream)
 						.map(Vocabulary::toIndices);
@@ -219,9 +224,10 @@ public class ModelRunner {
 													 : lines.map(l -> l.collect(Collectors.toList()))
 															.flatMap(l -> predictSequence(model, l).stream())
 															.collect(Collectors.toList());
+					List<List<Double>> perLine = toLines(lexed, modeled);
 					mrr[0] += modeled.stream().mapToDouble(m -> m).sum();
 					Vocabulary.restoreCheckpoint();
-					return Pair.of(f, modeled);
+					return Pair.of(f, perLine);
 				});
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -262,5 +268,18 @@ public class ModelRunner {
 			.sorted((p1, p2) -> -Double.compare(p1.right, p2.right))
 			.map(p -> p.left)
 			.collect(Collectors.toList());
+	}
+
+	private static List<List<Double>> toLines(List<List<String>> lexed, List<Double> modeled) {
+		List<List<Double>> perLine = new ArrayList<>();
+		int ix = 0;
+		for (int i = 0; i < lexed.size(); i++) {
+			List<Double> line = new ArrayList<>();
+			for (int j = 0; j < lexed.get(i).size(); j++) {
+				line.add(modeled.get(ix++));
+			}
+			perLine.add(line);
+		}
+		return perLine;
 	}
 }

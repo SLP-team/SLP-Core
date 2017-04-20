@@ -135,7 +135,6 @@ public class LexerRunner {
 		List<List<String>> lexed = lexer.lex(lines)
 				.map(l -> l.map(t -> translate ? ""+Vocabulary.toIndex(t) : t))
 				.map(l -> l.collect(Collectors.toList()))
-				.filter(l -> !l.isEmpty())
 				.collect(Collectors.toList());
 		if (lexed.isEmpty()) return Collections.emptyList();
 		if (delimiters) {

@@ -287,10 +287,10 @@ public class CLI {
 				System.err.println("Source path for training does not exist: " + inDir);
 				return;
 			}
-			if (Vocabulary.size() <= 1) {
-				VocabularyRunner.build(inDir);
-				VocabularyRunner.write(new File(outFile.getParentFile(), "train.vocab"));
-			}
+//			if (Vocabulary.size() <= 1) {
+//				VocabularyRunner.build(inDir);
+//				VocabularyRunner.write(new File(outFile.getParentFile(), "train.vocab"));
+//			}
 			NGramModel model = NGramModel.standard();
 			ModelRunner.learn(model, inDir);
 			// Since this is for training n-grams only, override ModelRunner's model for easy access to the counter
@@ -313,8 +313,9 @@ public class CLI {
 				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
-				Map<File, List<Double>> fileProbs = ModelRunner.model(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
+				Map<File, List<List<Double>>> fileProbs = ModelRunner.model(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
 				DoubleSummaryStatistics summary = fileProbs.values().stream()
+						.flatMap(l -> l.stream())
 						.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
 						.summaryStatistics();
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
@@ -343,8 +344,9 @@ public class CLI {
 			NGramModel nGramModel = getNGramModel();
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Map<File, List<Double>> fileProbs = ModelRunner.model(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
+			Map<File, List<List<Double>>> fileProbs = ModelRunner.model(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
 			DoubleSummaryStatistics summary = fileProbs.values().stream()
+					.flatMap(l -> l.stream())
 					.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
 					.summaryStatistics();
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
@@ -367,8 +369,9 @@ public class CLI {
 				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
-				Map<File, List<Double>> fileMRRs = ModelRunner.predict(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
+				Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
 				DoubleSummaryStatistics summary = fileMRRs.values().stream()
+						.flatMap(l -> l.stream())
 						.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
 						.summaryStatistics();
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
@@ -397,8 +400,9 @@ public class CLI {
 			NGramModel nGramModel = getNGramModel();
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Map<File, List<Double>> fileMRRs = ModelRunner.predict(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
+			Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
 			DoubleSummaryStatistics summary = fileMRRs.values().stream()
+					.flatMap(l -> l.stream())
 					.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
 					.summaryStatistics();
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
@@ -429,13 +433,20 @@ public class CLI {
 		return null;
 	}
 
-	private static void write(Map<File, List<Double>> fileProbs) {
+	private static void write(Map<File, List<List<Double>>> fileProbs) {
 		String out = getArg(VERBOSE);
 		if (out != null) {
 			try (FileWriter fw = new FileWriter(new File(out))) {
-				for (Entry<File, List<Double>> entry : fileProbs.entrySet()) {
+				for (Entry<File, List<List<Double>>> entry : fileProbs.entrySet()) {
 					fw.append(entry.getKey() + "\n");
-					for (Double d : entry.getValue()) fw.append(String.format("%.6f\n", d));
+					for (List<Double> line : entry.getValue()) {
+						for (int i = 0; i < line.size(); i++) {
+							Double d = line.get(i);
+							fw.append(String.format("%.6f", d));
+							if (i < line.size() - 1) fw.append('\t');
+							else fw.append('\n');
+						}
+					}
 				}
 			} catch (IOException e) {
 				e.printStackTrace();

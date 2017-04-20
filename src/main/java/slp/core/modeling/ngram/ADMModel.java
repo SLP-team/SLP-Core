@@ -41,10 +41,10 @@ public class ADMModel extends NGramModel {
 		
 		// Probability calculation
 		double discount = count > 0 ? Ds[Math.min(count, Ds.length) - 1] : 0.0;
-		double MLE = Math.max(0.0, count - discount) / contextCount;
+		double MLEDisc = Math.max(0.0, count - discount) / contextCount;
 		double lambda = 1 - (Ds[0] * Ns[0] + Ds[1] * Ns[1] + Ds[2] * Ns[2]) / contextCount;
 		// Must divide MLE by lambda to match contract
-		return Pair.of(MLE/lambda, lambda);
+		return Pair.of(MLEDisc/lambda, lambda);
 	}
 
 }

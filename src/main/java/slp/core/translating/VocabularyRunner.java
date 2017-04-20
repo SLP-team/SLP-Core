@@ -69,6 +69,7 @@ public class VocabularyRunner {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		if (c[0] > 1000) System.out.println("Reading finished (" + c[0] + " files), sorting vocabulary");
 		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
 			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
 			.collect(Collectors.toList());
