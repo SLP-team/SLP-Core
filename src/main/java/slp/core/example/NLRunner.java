@@ -20,12 +20,13 @@ public class NLRunner {
 		File train = new File(args[0]);
 		// If second argument, will test on that path, else will 'self-test' on train using full cross-validation per line
 		File test = args.length < 2 ? train : new File(args[1]);
-
+		
 		// 1. Lexing
-		//   a. Set up lexer using a JavaLexer
+		//   a. Set up lexer using a PunctuationLexer (splits preserving punctuation, discarding whitespace,
+		//      and preserving <unk>, <s> and </s> tokens). Could also use WhitespaceLexer (just splits on whitespace)
 		LexerRunner.setLexer(new PunctuationLexer());
-		//   b. Add delimiters if not present (to each file, or to each line if perLine is set as below)
-		LexerRunner.useDelimiters(true);
+		//   b. Add start-of-line/end-of-line delimiters (to each file, or to each line if perLine is set as below)
+		LexerRunner.addSentenceMarkers(true);
 		//   c. Set delimiters for each line separately (often applicable, though not necessary for NLP)
 		//      - Note that this does not imply or exclude modeling per file; that must explicitly set as below.
 		//      - There are cases in which we want to add per-line delimiters but still model a whole file as one.
@@ -33,13 +34,13 @@ public class NLRunner {
 		
 		// 2. Vocabulary
 		//    a. Omit any events seen less than twice (i.e. one time) in training data
+		//       (other values may be better, esp. for very larger corpora)
 		VocabularyRunner.cutOff(2);
 		//    b. Close vocabulary after building it (typical for NLP, less applicable to source code).
-		VocabularyRunner.close(false);
+		VocabularyRunner.close(true);
 		//    c. Build on train data.
 		//       - Could use VocabularyRunner.write(file); to write this vocabulary for future use here
 		VocabularyRunner.build(train);
-		
 		
 		// 3. Model
 		//    a. Model each line in isolation (typical for NLP; again, not linked to LexerRunner.perLine)
@@ -60,9 +61,8 @@ public class NLRunner {
 		Stream<Pair<File, List<List<Double>>>> modeledFiles = ModelRunner.model(model, test);
 		//    b. Retrieve entropy statistics by mapping the entropies per file
 		DoubleSummaryStatistics statistics = modeledFiles.map(pair -> pair.right)
-			.flatMap(l -> l.stream())
-			// Note the "skip(1)", since we added delimiters and we generally don't model the start-of-line token
-			.flatMap(t -> t.stream().skip(1))
+			// Note the "skip(1)" (per line), since we added delimiters and we generally don't model the start-of-line token
+			.flatMap(f -> f.stream().flatMap(l -> l.stream().skip(1)))
 			.mapToDouble(d -> d)
 			.summaryStatistics();
 		

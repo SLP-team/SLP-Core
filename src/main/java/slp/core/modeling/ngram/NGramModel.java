@@ -18,7 +18,7 @@ import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
 public abstract class NGramModel extends AbstractModel {
-
+	
 	protected Counter counter;
 
 	public NGramModel() {
@@ -38,42 +38,59 @@ public abstract class NGramModel extends AbstractModel {
 
 	@Override
 	public void learn(List<Integer> input) {
-		NGramSequencer.sequenceForward(input).stream().forEach(this.counter::addAggressive);
+		this.counter.countBatch(NGramSequencer.sequenceForward(input));
 	}
 	
 	@Override
 	public void learnToken(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
 		if (sequence.size() == ModelRunner.getNGramOrder() || index == input.size() - 1) {
-			this.counter.addAggressive(sequence);
+			this.counter.count(sequence);
 		}
 	}
 	
 	@Override
 	public void forget(List<Integer> input) {
-		NGramSequencer.sequenceForward(input).stream().forEach(this.counter::removeAggressive);
+		this.counter.unCountBatch(NGramSequencer.sequenceForward(input));
 	}
 	
 	@Override
 	public void forgetToken(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
 		if (sequence.size() == ModelRunner.getNGramOrder() || index == input.size() - 1) {
-			this.counter.removeAggressive(sequence);
+			this.counter.unCount(sequence);
 		}
 	}
 
 	@Override
 	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
+		double prob = 0;
+		double conf = 0;
+		double weight = Math.pow(2, -sequence.size() - 1);
+		int hits = 0;
+		for (int i = sequence.size() - 1; i >= 0; i--) {
+			Pair<Double, Double> resN = this.modelWithConfidence(sequence.subList(i, sequence.size()));
+			if (resN.right == 0) break;
+			hits++;
+			weight *= 2;
+			conf += weight;
+			prob += resN.left*weight;
+		}
+		prob /= conf;
+		conf = 1.0 - Math.pow(2, -hits);
+//		return Pair.of(prob, conf);
 		Pair<Double, Double> res = Pair.of(0.0, 0.0);
 		for (int i = 0; i < sequence.size(); i++) {
 			Pair<Double, Double> resN = this.modelWithConfidence(sequence.subList(i, sequence.size()));
+			if (resN.right == 0) continue;
 			double probG = res.left + resN.left*resN.right*(1 - res.right);
 			double confG = res.right + resN.right - res.right*resN.right;
 			res = Pair.of(probG, confG);
 		}
 		// Normalize probability to sum to 1 (instead of to confidence)
 		if (res.right > 0) res = Pair.of(res.left/res.right, res.right);
+		if (Math.abs(res.left - prob) > 1e-3 || res.right != conf) System.out.println(sequence + "\t" + res + "\t" + prob + ", " + conf);
 		return res;
 	}
 

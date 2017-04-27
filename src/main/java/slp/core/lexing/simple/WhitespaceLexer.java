@@ -9,8 +9,13 @@ import slp.core.lexing.Lexer;
 public class WhitespaceLexer implements Lexer {
 
 	@Override
-	public Stream<Stream<String>> lex(List<String> lines) {
-		return lines.stream().map(line ->
+	public Stream<Stream<String>> lex(Stream<String> lines) {
+		return lines.map(line ->
 				Arrays.stream(line.split("\\s+")));
+	}
+	
+	@Override
+	public Stream<Stream<String>> lex(List<String> lines) {
+		return lex(lines.stream());
 	}
 }

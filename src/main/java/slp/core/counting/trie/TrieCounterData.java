@@ -25,43 +25,43 @@ public class TrieCounterData {
 		Arrays.fill(this.indices, Integer.MAX_VALUE);
 	}
 
-	void updateSuccessor(List<Integer> indices, int index, boolean count, Object succ) {
-		if (succ instanceof TrieCounter) updateTrie(indices, index, count, succ);
-		else updateArray(indices, index, count, succ);
+	void updateSuccessor(List<Integer> indices, int index, int adj, Object succ) {
+		if (succ instanceof TrieCounter) updateTrie(indices, index, adj, succ);
+		else updateArray(indices, index, adj, succ);
 	}
 
-	private void updateTrie(List<Integer> indices, int index, boolean count, Object succ) {
+	private void updateTrie(List<Integer> indices, int index, int adj, Object succ) {
 		TrieCounter next = (TrieCounter) succ;
-		next.update(indices, index + 1, count);
-		updateCoCs(next.getCount(), count);
+		next.update(indices, index + 1, adj);
+		updateCoCs(next.getCount(), adj);
 		if (next.getCount() == 0) {
 			removeSucc(indices.get(index));
 		}
 	}
 
-	private void updateArray(List<Integer> indices, int index, boolean count, Object succ) {
+	private void updateArray(List<Integer> indices, int index, int adj, Object succ) {
 		int[] successor = (int[]) succ;
 		boolean valid = ArrayStorage.checkExactSequence(indices, index, successor);
-		if (valid) updateArrayCount(indices, index, count, successor);
+		if (valid) updateArrayCount(indices, index, adj, successor);
 		else {
-			TrieCounter newNext = promoteArrayToTrie(indices, index, count, successor);
-			updateTrie(indices, index, count, newNext);
+			if (adj < 0) System.err.println("Attempting to unsee never seen event");
+			TrieCounter newNext = promoteArrayToTrie(indices, index, successor);
+			updateTrie(indices, index, adj, newNext);
 		}
 	}
 
-	private void updateArrayCount(List<Integer> indices, int index, boolean count, int[] successor) {
-		successor[0] += (count ? 1 : -1);
-		updateCoCs(successor[0], count);
+	private void updateArrayCount(List<Integer> indices, int index, int adj, int[] successor) {
+		successor[0] += adj;
+		updateCoCs(successor[0], adj);
 		if (successor[0] == 0) {
 			removeSucc(indices.get(index));
 		}
 		for (int i = index + 1; i <= indices.size(); i++) {
-			this.updateNCounts(i, successor[0], count);
+			this.updateNCounts(i, successor[0], adj);
 		}
 	}
 
-	private TrieCounter promoteArrayToTrie(List<Integer> indices, int index, boolean count, int[] successor) {
-		if (!count) System.err.println("Attempting to unsee never seen event");
+	private TrieCounter promoteArrayToTrie(List<Integer> indices, int index, int[] successor) {
 		TrieCounter newNext = new TrieCounter(1);
 		newNext.setCount(successor[0]);
 		if (successor.length > 1) {
@@ -75,46 +75,44 @@ public class TrieCounterData {
 		return newNext;
 	}
 
-	void addSucessor(List<Integer> indices, int index, boolean count) {
-		if (!count) {
-			System.out.println("Attempting to unsee never seen event: " + indices.subList(index, indices.size()));
+	void addSucessor(List<Integer> indices, int index, int adj) {
+		if (adj < 0) {
+			System.out.println("Attempting to stored event with negative count: " + indices.subList(index, indices.size()));
 			return;
 		}
 		int[] singleton = new int[indices.size() - index];
-		singleton[0] = 1;
+		singleton[0] = adj;
 		for (int i = 1; i < singleton.length; i++) {
 			singleton[i] = indices.get(index + i);
 		}
 		putSucc(indices.get(index), singleton);
-		updateCoCs(1, count);
+		updateCoCs(1, adj);
 		for (int i = index + 1; i <= indices.size(); i++) {
-			this.updateNCounts(i, 1, count);
+			this.updateNCounts(i, 1, adj);
 		}
 	}
 
-	void updateCount(boolean count, boolean terminal) {
-		if (count) this.counts[0]++; else this.counts[0]--;
-		if (!terminal) {
-			if (count) this.counts[1]++; else this.counts[1]--;
-		}
+	void updateCount(int adj, boolean terminal) {
+		this.counts[0] += adj;
+		if (!terminal) this.counts[1] += adj;
 	}
 
-	private void updateCoCs(int count, boolean added) {
+	private void updateCoCs(int count, int adj) {
 		if (COUNT_OF_COUNTS_CUTOFF == 0) return;
 		int currIndex = Math.min(count, COUNT_OF_COUNTS_CUTOFF);
-		int prevIndex = Math.min(count + (added ? -1 : 1), COUNT_OF_COUNTS_CUTOFF);
+		int prevIndex = Math.min(count - adj, COUNT_OF_COUNTS_CUTOFF);
 		if (currIndex != prevIndex) {
 			if (currIndex >= 1) this.counts[currIndex + 1]++;
 			if (prevIndex >= 1) this.counts[prevIndex + 1]--;
 		}
 	}
 
-	void updateNCounts(int n, int count, boolean added) {
+	void updateNCounts(int n, int count, int adj) {
 		if (n == 0) return;
 		if (count > 0 && count < 5) {
 			TrieCounterData.nCounts[n - 1][count - 1]++;
 		}
-		int prevCount = added ? count - 1 : count + 1;
+		int prevCount = count - adj;
 		if (prevCount > 0 && prevCount < 5) {
 			TrieCounterData.nCounts[n - 1][prevCount - 1]--;
 		}
@@ -124,25 +122,18 @@ public class TrieCounterData {
 	 * Map bookkeeping
 	 */
 	private int getSuccIx(int key) {
-		if (this.indices.length < 1000) {
-			return Arrays.binarySearch(this.indices, key);
-		}
-		else {
-			int high = this.indices.length - 1;
-			int guess = key >= high ? high >>> 1 : key;
-			int ix = binSearch(key, 0, high, guess);
-			return ix;
-		}
+		return altBinSearch(key, 0, this.indices.length);
 	}
-
-	// Binary search with initial guess based on sorted property of indices, otherwise based on java.util.Arrays.binarySearch0
-	private int binSearch(int key, int low, int high, int mid) {
+	
+	// Binary search with slightly modified 'mid' guess, based on sorted property of indices, otherwise based on java.util.Arrays.binarySearch0
+	private int altBinSearch(int key, int low, int high) {
+    	int mid = key >= high || key <= low ? (high + low) >>> 1 : key - 1;
         while (low <= high) {
             int midVal = this.indices[mid];
             if (midVal == key) return mid;
             if (midVal < key) low = mid + 1;
-            else high = mid - 1;
-            mid = (low + high) >>> 1;
+			else high = mid - 1;
+        	mid = (high + low) >>> 1;
         }
         return -(low + 1);  // key not found.
 	}
@@ -192,8 +183,10 @@ public class TrieCounterData {
 
 	private void grow() {
 		int oldLen = this.indices.length;
-		this.indices = Arrays.copyOf(this.indices, (int) (this.indices.length * GROWTH_FACTOR + 1));
-		this.successors = Arrays.copyOf(this.successors, (int) (this.successors.length * GROWTH_FACTOR + 1));
+		int newLen = (int) (this.indices.length * GROWTH_FACTOR + 1);
+		if (newLen == oldLen - 1) newLen++;
+		this.indices = Arrays.copyOf(this.indices, newLen);
+		this.successors = Arrays.copyOf(this.successors, newLen);
 		for (int i = oldLen; i < this.indices.length; i++) this.indices[i] = Integer.MAX_VALUE;
 	}
 }

@@ -10,9 +10,9 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import slp.core.counting.Counter;
+import slp.core.counting.giga.GigaCounter;
 import slp.core.counting.io.CountsReader;
 import slp.core.counting.io.CountsWriter;
-import slp.core.counting.trie.TrieCounter;
 import slp.core.counting.trie.TrieCounterData;
 import slp.core.example.JavaRunner;
 import slp.core.example.NLRunner;
@@ -64,6 +64,7 @@ public class CLI {
 	// Training options
 	private static final String TRAIN = "(-tr|--train)";
 	private static final String ORDER = "(-o|--order)";
+	private static final String GIGA = "--giga";
 	
 	// Testing options
 	private static final String TEST = "(-te|--test)";
@@ -183,14 +184,14 @@ public class CLI {
 	private static void setupLexerRunner() {
 		LexerRunner.setLexer(getLexer());
 		if (isSet(PER_LINE)) LexerRunner.perLine(true);
-		if (isSet(ADD_DELIMS)) LexerRunner.useDelimiters(true);
+		if (isSet(ADD_DELIMS)) LexerRunner.addSentenceMarkers(true);
 		if (isSet(EXTENSION)) LexerRunner.useExtension(getArg(EXTENSION));
 	}
 
 	private static Lexer getLexer() {
 		String language = getArg(LANGUAGE);
 		Lexer lexer;
-		if (language == null) lexer = new PunctuationLexer();
+		if (language == null || language.toLowerCase().equals("simple")) lexer = new PunctuationLexer();
 		else if (language.toLowerCase().equals("java")) lexer = new JavaLexer();
 		else if (language.toLowerCase().equals("tokens")) lexer = new TokenizedLexer();
 		else if (language.toLowerCase().equals("blank")) lexer = new WhitespaceLexer();
@@ -218,7 +219,8 @@ public class CLI {
 	}
 	
 	private static NGramModel getNGramModel() {
-		Counter counter = isSet(COUNTER) ? CountsReader.readCounter(new File(getArg(COUNTER))) : new TrieCounter();
+		Counter counter = isSet(COUNTER) ? CountsReader.readCounter(new File(getArg(COUNTER))) :
+			isSet(GIGA) ? new GigaCounter() : new JMModel().getCounter();
 		String modelName = getArg(MODEL);
 		NGramModel model;
 		if (modelName == null) model = new JMModel(counter);
@@ -234,7 +236,7 @@ public class CLI {
 
 	private static void loadVocabulary() {
 		String file = getArg(VOCABULARY);
-		if (file == null || file.isEmpty()) return;
+		if (file == null || file.isEmpty() || !new File(file).exists()) return;
 		if (isSet(CLOSED)) VocabularyRunner.close(true);
 		VocabularyRunner.read(new File(file));
 	}
@@ -242,18 +244,19 @@ public class CLI {
 	private static void lex() {
 		lex(false);
 	}
-		
+	
 	private static void lex(boolean translate) {
 		if (arguments.length >= 3) {
 			File inDir = new File(arguments[1]);
 			File outDir = new File(arguments[2]);
 			if (!outDir.exists()) outDir.mkdirs();
 			LexerRunner.preTranslate(translate);
-			if (Vocabulary.size() <= 1) {
-				VocabularyRunner.build(inDir);
-				VocabularyRunner.write(new File(outDir.getParentFile(), "train.vocab"));
-			}
+			boolean emptyVocab = Vocabulary.size() <= 1;
 			LexerRunner.lexDirectory(inDir, outDir);
+			if (translate && emptyVocab) {
+				File vocabFile = isSet(VOCABULARY) ? new File(getArg(VOCABULARY)) : new File(outDir.getParentFile(), "train.vocab");
+				VocabularyRunner.write(vocabFile);
+			}
 		}
 		else {
 			System.err.println("Not enough arguments given."
@@ -287,15 +290,16 @@ public class CLI {
 				System.err.println("Source path for training does not exist: " + inDir);
 				return;
 			}
-//			if (Vocabulary.size() <= 1) {
-//				VocabularyRunner.build(inDir);
-//				VocabularyRunner.write(new File(outFile.getParentFile(), "train.vocab"));
-//			}
-			NGramModel model = NGramModel.standard();
+			boolean emptyVocab = Vocabulary.size() <= 1;
+			NGramModel model = getNGramModel();
 			ModelRunner.learn(model, inDir);
 			// Since this is for training n-grams only, override ModelRunner's model for easy access to the counter
 			Counter counter = model.getCounter();
 			CountsWriter.writeCounter(counter, outFile);
+			if (emptyVocab) {
+				File vocabFile = isSet(VOCABULARY) ? new File(getArg(VOCABULARY)) : new File(outFile.getParentFile(), "train.vocab");
+				VocabularyRunner.write(vocabFile);
+			}
 		}
 		else {
 			System.err.println("Not enough arguments given."
@@ -314,12 +318,9 @@ public class CLI {
 			}
 			else {
 				Map<File, List<List<Double>>> fileProbs = ModelRunner.model(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics summary = fileProbs.values().stream()
-						.flatMap(l -> l.stream())
-						.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
-						.summaryStatistics();
+				DoubleSummaryStatistics stats = getStats(fileProbs);
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
-						fileProbs.size(), summary.getCount(), summary.getAverage());
+						fileProbs.size(), stats.getCount(), stats.getAverage());
 				write(fileProbs);
 			}
 		}
@@ -338,19 +339,16 @@ public class CLI {
 				return;
 			}
 			else if (!testDir.exists()) {
-				System.err.println("Source path for testing does not exist: " + trainDir);
+				System.err.println("Source path for testing does not exist: " + testDir);
 				return;
 			}
 			NGramModel nGramModel = getNGramModel();
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Map<File, List<List<Double>>> fileProbs = ModelRunner.model(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics summary = fileProbs.values().stream()
-					.flatMap(l -> l.stream())
-					.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
-					.summaryStatistics();
+			DoubleSummaryStatistics stats = getStats(fileProbs);
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
-					fileProbs.size(), summary.getCount(), summary.getAverage());
+					fileProbs.size(), stats.getCount(), stats.getAverage());
 			write(fileProbs);
 		}
 		else {
@@ -370,12 +368,9 @@ public class CLI {
 			}
 			else {
 				Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics summary = fileMRRs.values().stream()
-						.flatMap(l -> l.stream())
-						.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
-						.summaryStatistics();
+				DoubleSummaryStatistics stats = getStats(fileMRRs);
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
-						fileMRRs.size(), summary.getCount(), summary.getAverage());
+						fileMRRs.size(), stats.getCount(), stats.getAverage());
 				write(fileMRRs);
 			}
 		}
@@ -394,19 +389,16 @@ public class CLI {
 				return;
 			}
 			else if (!testDir.exists()) {
-				System.err.println("Source path for testing does not exist: " + trainDir);
+				System.err.println("Source path for testing does not exist: " + testDir);
 				return;
 			}
 			NGramModel nGramModel = getNGramModel();
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics summary = fileMRRs.values().stream()
-					.flatMap(l -> l.stream())
-					.flatMapToDouble(l -> l.stream().skip(1).mapToDouble(d -> d))
-					.summaryStatistics();
+			DoubleSummaryStatistics stats = getStats(fileMRRs);
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
-					fileMRRs.size(), summary.getCount(), summary.getAverage());
+					fileMRRs.size(), stats.getCount(), stats.getAverage());
 			write(fileMRRs);
 		}
 		else {
@@ -431,6 +423,22 @@ public class CLI {
 			}
 		}
 		return null;
+	}
+
+	private static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
+		DoubleSummaryStatistics stats;
+		if (LexerRunner.isPerLine()) {
+			stats = fileProbs.values().stream()
+				.flatMap(f -> f.stream())
+				.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+				.mapToDouble(p -> p).summaryStatistics();
+		}
+		else {
+			stats = fileProbs.values().stream()
+				.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+				.mapToDouble(p -> p).summaryStatistics();
+		}
+		return stats;
 	}
 
 	private static void write(Map<File, List<List<Double>>> fileProbs) {

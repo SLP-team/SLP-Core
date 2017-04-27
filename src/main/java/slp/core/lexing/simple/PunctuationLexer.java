@@ -10,6 +10,13 @@ import slp.core.lexing.Lexer;
 public class PunctuationLexer implements Lexer {
 
 	@Override
+	public Stream<Stream<String>> lex(Stream<String> lines) {
+		return lines.map(line ->
+					Arrays.stream(line.split("\\s+"))
+						.flatMap(splitCarefully()));
+	}
+	
+	@Override
 	public Stream<Stream<String>> lex(List<String> lines) {
 		return lines.stream().map(line ->
 					Arrays.stream(line.split("\\s+"))
@@ -21,7 +28,7 @@ public class PunctuationLexer implements Lexer {
 	 * @return
 	 */
 	private Function<? super String, ? extends Stream<? extends String>> splitCarefully() {
-		return x -> x.toLowerCase().matches("<(/)?(sol|eol|unk)>")
+		return x -> x.toLowerCase().matches("<((/)?s|unk)>")
 					? Stream.of(x)
 					: Arrays.stream(x.split("((?<=\\p{Punct})|(?=\\p{Punct}))"));
 	}

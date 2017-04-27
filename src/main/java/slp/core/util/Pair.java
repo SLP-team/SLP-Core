@@ -1,8 +1,8 @@
 package slp.core.util;
 
 public class Pair<T, V> {
-	public final T left;
-	public final V right;
+	public T left;
+	public V right;
 	
 	public Pair(T t, V v) {
 		this.left = t;

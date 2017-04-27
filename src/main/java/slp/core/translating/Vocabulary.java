@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -100,8 +99,8 @@ public class Vocabulary {
 		return indices.map(Vocabulary::toWord);
 	}
 	
-	public static List<String> toWords(List<Integer> indices) {
-		return indices.stream().map(Vocabulary::toWord).collect(Collectors.toList());
+	public static Stream<String> toWords(Stream<Integer> indices) {
+		return indices.map(Vocabulary::toWord);
 	}
 	
 	public static String toWord(Integer index) {

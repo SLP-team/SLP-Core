@@ -9,7 +9,12 @@ import slp.core.lexing.Lexer;
 public class TokenizedLexer implements Lexer {
 
 	@Override
+	public Stream<Stream<String>> lex(Stream<String> lines) {
+		return lines.map(line -> Arrays.stream(line.split("\t")).filter(f -> !f.trim().isEmpty()));
+	}
+	
+	@Override
 	public Stream<Stream<String>> lex(List<String> lines) {
-		return lines.stream().map(line -> Arrays.stream(line.split("\t")).filter(f -> !f.trim().isEmpty()));
+		return lex(lines.stream());
 	}
 }

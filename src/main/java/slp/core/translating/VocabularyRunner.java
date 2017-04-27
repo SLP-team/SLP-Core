@@ -62,8 +62,7 @@ public class VocabularyRunner {
 				.filter(File::isFile)
 				.forEach(f -> {
 					if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
-					LexerRunner.lex(f).stream()
-						.flatMap(List::stream)
+					LexerRunner.lex(f).flatMap(l -> l)
 						.forEach(t -> counts.merge(t, 1, Integer::sum));
 				});
 		} catch (IOException e) {
@@ -95,7 +94,7 @@ public class VocabularyRunner {
 	 * @return 
 	 */
 	public static void read(File file) {
-		Reader.readLines(file).stream()
+		Reader.readLines(file)
 			.map(x -> x.split("\t", 3))
 			.filter(x -> Integer.parseInt(x[0]) >= cutOff)
 			.forEachOrdered(split -> {

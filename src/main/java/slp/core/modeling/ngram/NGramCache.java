@@ -6,6 +6,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
+import slp.core.counting.trie.TrieCounter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
@@ -24,7 +25,7 @@ public class NGramCache extends AbstractModel {
 	}
 
 	public NGramCache(int capacity) {
-		this.model = NGramModel.standard();
+		this.model = NGramModel.standard(new TrieCounter());
 		// A cache is dynamic by default and only acts statically in prediction tasks
 		setDynamic(true);
 		
@@ -34,7 +35,7 @@ public class NGramCache extends AbstractModel {
 	
 	@Override
 	public void notify(File next) {
-		this.model = NGramModel.standard();
+		this.model = NGramModel.standard(new TrieCounter());
 		this.cache.clear();
 	}
 
@@ -44,11 +45,11 @@ public class NGramCache extends AbstractModel {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
 		if (sequence.size() == ModelRunner.getNGramOrder() || index == input.size() - 1) {
 			this.cache.addLast(sequence);
-			this.model.counter.addAggressive(sequence);
+			this.model.counter.count(sequence);
 		}
 		if (this.cache.size() > this.capacity) {
 			List<Integer> removed = this.cache.removeFirst();
-			this.model.counter.removeAggressive(removed);
+			this.model.counter.unCount(removed);
 		}
 	}
 

@@ -29,8 +29,8 @@ public class JavaRunner {
 		LexerRunner.setLexer(new JavaLexer());
 		//   b. Do not tokenize per line for Java (invoked for the sake of example; false is the default)
 		LexerRunner.perLine(false);
-		//   c. But, do add delimiters (to start and end of file)
-		LexerRunner.useDelimiters(true);
+		//   c. But, do add sentence markers (to start and end of file)
+		LexerRunner.addSentenceMarkers(true);
 		
 		
 		// 2. Vocabulary
@@ -75,9 +75,8 @@ public class JavaRunner {
 		Stream<Pair<File, List<List<Double>>>> modeledFiles = ModelRunner.model(model, test);
 		//    b. Retrieve entropy statistics by mapping the entropies per file
 		DoubleSummaryStatistics statistics = modeledFiles.map(pair -> pair.right)
-			.flatMap(l -> l.stream()
-			// Note the "skip(1)", since we added delimiters and we generally don't model the start-of-line token
-			.flatMap(t -> t.stream().skip(1)))
+			// Note the "skip(1)" (per file), since we added delimiters and we generally don't model the start-of-line token
+			.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(1))		
 			.mapToDouble(d -> d)
 			.summaryStatistics();
 		

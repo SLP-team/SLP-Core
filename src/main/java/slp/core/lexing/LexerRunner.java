@@ -2,9 +2,9 @@ package slp.core.lexing;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import slp.core.io.Reader;
 import slp.core.io.Writer;
@@ -24,7 +24,7 @@ public class LexerRunner {
 	private static Lexer lexer = new PunctuationLexer();
 	private static boolean translate = false;
 	private static boolean perLine = false;
-	private static boolean delimiters = false;
+	private static boolean sentenceMarkers = false;
 	private static String regex = ".*";
 	
 	/**
@@ -43,23 +43,22 @@ public class LexerRunner {
 	}
 
 	/**
-	 * Enforce adding delimiters to text to lex (i.e. "&lt;SOL"&gt;", ""&lt;EOL"&gt;"; see {@link Vocabulary}) if not present.
+	 * Enforce adding delimiters to text to lex (i.e. "&lt;s&gt;", ""&lt;/s&gt;"; see {@link Vocabulary})
+	 * to each sentence (by default the whole file, unless {@link #perLine(boolean)} is set,
+	 * in which case each line is treated as a sentence).
 	 * <br />
 	 * Default: false, which assumes these have already been added.
-	 * <br /> <em>Note:</em> to 
-	 * <br /> <em>Note:</em> current implementation adds SOL/EOL markers with a single space,
-	 * which might be incompatible with the tokenizer used. May be revised in the future.
 	 * @return
 	 */
-	public static void useDelimiters(boolean useDelimiters) {
-		LexerRunner.delimiters = useDelimiters;
+	public static void addSentenceMarkers(boolean useDelimiters) {
+		LexerRunner.sentenceMarkers = useDelimiters;
 	}
 	
 	/**
-	 * Returns whether or not file/line (depending on {@code perLine}) delimimters are added.
+	 * Returns whether or not file/line (depending on {@code perLine}) sentence markers are added.
 	 */
-	public static boolean addsDelimiters() {
-		return LexerRunner.delimiters;
+	public static boolean addsSentenceMarkers() {
+		return LexerRunner.sentenceMarkers;
 	}
 	
 	/**
@@ -121,9 +120,9 @@ public class LexerRunner {
 	 * (which accepts everything unless set otherwise in {@link #useRegex(String)}).
 	 * @param file File to lex
 	 */
-	public static List<List<String>> lex(File file) {
+	public static Stream<Stream<String>> lex(File file) {
 		if (file.getName().matches(regex)) return lex(Reader.readLines(file));
-		else return Collections.emptyList();
+		else return Stream.empty();
 	}
 	
 	/**
@@ -131,58 +130,25 @@ public class LexerRunner {
 	 * @param lines Lines to lex
 	 * @return A Stream of lines containing a Stream of tokens each
 	 */
-	public static List<List<String>> lex(List<String> lines) {
-		List<List<String>> lexed = lexer.lex(lines)
-				.map(l -> l.map(t -> translate ? ""+Vocabulary.toIndex(t) : t))
-				.map(l -> l.collect(Collectors.toList()))
-				.collect(Collectors.toList());
-		if (lexed.isEmpty()) return Collections.emptyList();
-		if (delimiters) {
-			if (perLine) {
-				lexed.stream().forEach(LexerRunner::padLine);
-			}
-			else {
-				padStart(lexed.get(0));
-				padEnd(lexed.get(lexed.size() - 1));
-			}
+	public static Stream<Stream<String>> lex(Stream<String> lines) {
+		Stream<Stream<String>> lexed = lexer.lex(lines).map(l -> !translate ? l : l.map(t -> ""+Vocabulary.toIndex(t)));
+		if (sentenceMarkers) return withDelimiters(lexed);
+		else return lexed;
+	}
+
+	private static Stream<Stream<String>> withDelimiters(Stream<Stream<String>> lexed) {
+		if (perLine) {
+			return lexed.map(l -> Stream.concat(Stream.of(Vocabulary.BOS), Stream.concat(l, Stream.of(Vocabulary.EOS))));
 		}
-		return lexed;
+		else {
+			// Concatenate the BOS token with the first sub-stream (first line's stream) specifically to avoid off-setting all the lines.
+			// The EOS token is just appended as an extra line
+			int[] c = { 0 };
+			lexed = lexed.map(l -> c[0]++ < 1 ? Stream.concat(Stream.of(Vocabulary.BOS), l) : l);
+			return Stream.concat(lexed, Stream.of(Stream.of(Vocabulary.EOS)));
+		}
 	}
 	
-	private static void padLine(List<String> line) {
-		padStart(line);
-		padEnd(line);
-	}
-
-	private static void padStart(List<String> line) {
-		String start = Vocabulary.BOS;
-		if (translate) {
-			if (!Vocabulary.toWord(Integer.parseInt(line.get(0))).equals(start)) {
-				line.add(0, ""+Vocabulary.toIndex(start));
-			}
-		}
-		else if (!translate) {
-			if (!line.get(0).equals(start)) {
-				line.add(0, start);
-			}
-		}
-	}
-
-	private static void padEnd(List<String> line) {
-		String last = line.get(line.size() - 1);
-		String end = Vocabulary.EOS;
-		if (translate) {
-			if (!Vocabulary.toWord(Integer.parseInt(last)).equals(end)) {
-				line.add(""+Vocabulary.toIndex(end));
-			}
-		}
-		else if (!translate) {
-			if (!last.equals(end)) {
-				line.add(end);
-			}
-		}
-	}
-
 	/**
 	 * Lex a directory recursively, provided for convenience.
 	 * Creates a mirror-structure in 'to' that has the lexed (and translated if {@link #preTranslate()} is set) file for each input file
@@ -190,25 +156,51 @@ public class LexerRunner {
 	 * @param to Target file/directory to be created with lexed (optionally translated) content from source
 	 */
 	public static void lexDirectory(File from, File to) {
-		if (from.isFile()) {
-			List<List<String>> lexed = lex(from);
-			if (lexed.isEmpty()) return;
-			try {
-				Writer.writeTokens(to, lexed);
-			} catch (IOException e) {
-				System.out.println("Exception in LexerBuilder.tokenize(), from " + from + " to " + to);
-				e.printStackTrace();
-			}
+		int[] count = { 0 };
+		try {
+			Files.walk(from.toPath())
+				.map(Path::toFile)
+				.filter(File::isFile)
+				.forEach(fIn -> {
+					if (++count[0] % 1000 == 0) {
+						System.out.println("Lexing at file " + count[0]);
+					}
+					String path = to.getAbsolutePath() + fIn.getAbsolutePath().substring(from.getAbsolutePath().length());
+					File fOut = new File(path);
+					File outDir = fOut.getParentFile();
+					if (!fOut.exists()) {
+						outDir.mkdirs();
+						try {
+							Stream<Stream<String>> lexed = lex(fIn);
+							Writer.writeTokens(fOut, lexed);
+						} catch (IOException e) {
+							System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);
+							e.printStackTrace();
+						}
+					}
+				});
+		} catch (IOException e1) {
+			e1.printStackTrace();
 		}
-		else {
-			for (String child : from.list()) {
-				File fIn = new File(from, child);
-				File fOut = new File(to, child);
-				if (fIn.isDirectory()) {
-					fOut.mkdir();
-				}
-				lexDirectory(fIn, fOut);
-			}
-		}
+//		if (from.isFile()) {
+//			Stream<Stream<String>> lexed = lex(from);
+////			if (lexed.isEmpty()) return;
+//			try {
+//				Writer.writeTokens(to, lexed);
+//			} catch (IOException e) {
+//				System.out.println("Exception in LexerBuilder.tokenize(), from " + from + " to " + to);
+//				e.printStackTrace();
+//			}
+//		}
+//		else {
+//			for (String child : from.list()) {
+//				File fIn = new File(from, child);
+//				File fOut = new File(to, child);
+//				if (fIn.isDirectory()) {
+//					fOut.mkdir();
+//				}
+//				lexDirectory(fIn, fOut);
+//			}
+//		}
 	}
 }

@@ -34,9 +34,6 @@ public interface Counter extends Externalizable {
 
 	/**
 	 * Returns the number of sequences of length n seen `count' times
-	 * @param n
-	 * @param count
-	 * @return
 	 */
 	public abstract int getCountofCount(int n, int count);
 	
@@ -46,9 +43,13 @@ public interface Counter extends Externalizable {
 	
 	public int[] getDistinctCounts(int range, List<Integer> indices);
 
-	public void addAggressive(List<Integer> indices);
-	public void removeAggressive(List<Integer> indices);
+	public void count(List<Integer> indices);
+	public void unCount(List<Integer> indices);
 
-	public void addConservative(List<Integer> indices);
-	public void removeConservative(List<Integer> indices);
+	public default void countBatch(List<List<Integer>> indices) {
+		indices.forEach(this::count);
+	}
+	public default void unCountBatch(List<List<Integer>> indices) {
+		indices.forEach(this::unCount);
+	}
 }

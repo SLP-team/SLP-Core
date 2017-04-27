@@ -1,5 +1,6 @@
 package slp.core.counting.trie;
 
+import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -11,7 +12,7 @@ import java.util.stream.IntStream;
 import slp.core.counting.Counter;
 import slp.core.util.Pair;
 
-public class TrieCounter implements Counter {
+public class TrieCounter implements Counter, Externalizable {
 
 	TrieCounterData data;
 	public TrieCounter() {
@@ -32,6 +33,9 @@ public class TrieCounter implements Counter {
 	@Override
 	public int getCount() {
 		return this.data.counts[0];
+	}
+	public int getContextCount() {
+		return this.data.counts[1];
 	}
 
 	private int getCount(Object successor) {
@@ -165,46 +169,31 @@ public class TrieCounter implements Counter {
 	}
 
 	@Override
-	public final void addConservative(List<Integer> indices) {
-		updateConservative(indices, true);
+	public final void count(List<Integer> indices) {
+		update(indices, 1);
 	}
 
 	@Override
-	public final void removeConservative(List<Integer> indices) {
-		updateConservative(indices, false);
+	public final void unCount(List<Integer> indices) {
+		update(indices, -1);
 	}
 
-	@Override
-	public final void addAggressive(List<Integer> indices) {
-		updateAggressive(indices, true);
-	}
-
-	@Override
-	public final void removeAggressive(List<Integer> indices) {
-		updateAggressive(indices, false);
-	}
-
-	public final void updateConservative(List<Integer> indices, boolean count) {
-		update(indices, 0, count);
-		if (!indices.isEmpty()) update(indices.subList(0, indices.size() - 1), 0, !count);
-	}
-
-	public final void updateAggressive(List<Integer> indices, boolean count) {
-		update(indices, 0, count);
+	public final void update(List<Integer> indices, int adj) {
+		update(indices, 0, adj);
 	}
 
 	/*
 	 * Trie Updating
 	 */
-	public void update(List<Integer> indices, int index, boolean count) {
+	public synchronized void update(List<Integer> indices, int index, int adj) {
 		if (index < indices.size()) {
 			Integer key = indices.get(index);
 			Object successor = this.data.getSuccessor(key);
-			if (successor != null) this.data.updateSuccessor(indices, index, count, successor);
-			else this.data.addSucessor(indices, index, count);
+			if (successor != null) this.data.updateSuccessor(indices, index, adj, successor);
+			else this.data.addSucessor(indices, index, adj);
 		}
-		this.data.updateCount(count, index == indices.size());
-		this.data.updateNCounts(index, this.getCount(), count);
+		this.data.updateCount(adj, index == indices.size());
+		this.data.updateNCounts(index, this.getCount(), adj);
 	}
 
 	@Override
