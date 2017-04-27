@@ -1,11 +1,13 @@
 package slp.core.modeling.mix;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import slp.core.counting.Counter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.Model;
 import slp.core.modeling.ModelRunner;
@@ -34,9 +36,21 @@ public class NestedModel extends AbstractModel {
 	}
 
 	private Model fromGlobal() {
+		return fromGlobal(false);
+	}
+
+	private Model fromGlobal(boolean copyCounter) {
 		try {
-			return global.getClass().newInstance();
-		} catch (InstantiationException | IllegalAccessException e) {
+			if (copyCounter && this.global instanceof NGramModel) {
+				Class<? extends Counter> counter = ((NGramModel) this.global).getCounter().getClass();
+				return this.global.getClass().getConstructor(Counter.class).newInstance(counter.newInstance());
+			}
+			else {
+				return this.global.getClass().newInstance();
+			}
+		} catch (InstantiationException | IllegalAccessException
+				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException
+				e) {
 			e.printStackTrace();
 			return NGramModel.standard();
 		}
@@ -94,9 +108,19 @@ public class NestedModel extends AbstractModel {
 	}
 
 	@Override
+	public void learn(List<Integer> input) {
+		this.global.learn(input);
+	}
+
+	@Override
 	public void learnToken(List<Integer> input, int index) {
 		// Tentatively, only the global model is updated dynamically
 		this.global.learnToken(input, index);
+	}
+
+	@Override
+	public void forget(List<Integer> input) {
+		this.global.forget(input);
 	}
 
 	@Override

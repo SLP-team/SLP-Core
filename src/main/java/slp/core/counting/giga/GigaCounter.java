@@ -136,9 +136,9 @@ public class GigaCounter implements Counter {
 		this.counters.clear();
 		
 		long t = System.currentTimeMillis();
-		System.out.println("Resolving to VirtualCounter");
+		if (this.graveyard.size() >= 10) System.out.println("Resolving to VirtualCounter");
 		this.counter = new VirtualCounter(unPack());
-		System.out.println("Resolved in " + (System.currentTimeMillis() - t)/1000 + "s");
+		if (this.graveyard.size() >= 10) System.out.println("Resolved in " + (System.currentTimeMillis() - t)/1000 + "s");
 	}
 
 	private void pack(TrivialCounter c) {
@@ -188,13 +188,15 @@ public class GigaCounter implements Counter {
 						}
 						in.close();
 						this.graveyard.set(j, null);
-						if (++done[0] % (this.graveyard.size() / 10) == 0) System.out.print(100*done[0] / this.graveyard.size() + "%...");
+						if (this.graveyard.size() >= 10 && ++done[0] % (this.graveyard.size() / 10) == 0) {
+							System.out.print(100*done[0] / this.graveyard.size() + "%...");
+						}
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
 			});
-		System.out.println();
+		if (this.graveyard.size() >= 10) System.out.println();
 		return counters;
 	}
 

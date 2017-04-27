@@ -5,6 +5,7 @@ import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.stream.Stream;
 
+import slp.core.counting.giga.GigaCounter;
 import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
 import slp.core.modeling.Model;
@@ -52,23 +53,21 @@ public class JavaRunner {
 		//    c. Set n-gram model order, 6 works well for Java
 		ModelRunner.setNGramOrder(6);
 		//    d. Use an n-gram model with simple Jelinek-Mercer smoothing (works well for code)
-		Model model = new JMModel();
-		
-		//    e. To get more fancy for source code, we can convert the model into a complex mix model.
-		//       - First wrap in a nested model
+		//       - Let's use a GigaCounter, fit for large corpora here as well; the nested model later on will copy this behavior.
+		Model model = new JMModel(new GigaCounter());
+		//    e. First, train this model on all files in 'train' recursively, using the usual updating mechanism (same as for dynamic updating).
+		//       - Note that this invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
+		//          other models may prefer to pre-train when calling the Model's constructor.
+		ModelRunner.learn(model, train);
+		//    f. To get more fancy for source code, we can convert the model into a complex mix model.
+		//       - First wrap in a nested model, causing it to learn all files in test into a new 'local' model
 		model = new NestedModel(test, model);
 		//       - Then, add an ngram-cache component.
-		//         * Note, order matters! The most local model should be "right-most" so it is called upon last ("gets the final say")
+		//         * Note, order matters! The most local model should be "right-most" so it is called upon last (i.e. "gets the final say")
 		//         * This is also why we apply the cache after the nested model
 		model = new InverseMixModel(model, new NGramCache());
 		//       - Finally, enable dynamic updating for the whole mixture (won't affect cache; it's dynamic by default)
 		model.setDynamic(true);
-		
-		//    f. Train this model on all files in 'train' recursively, using the usual updating mechanism (same as for dynamic updating).
-		//       - Note that this invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
-		//          other models may prefer to pre-train when calling the Model's constructor.
-		//       - Note that we could've invoked 'learn' before all the wrapping in this case
-		ModelRunner.learn(model, train);
 		
 		// 4. Running
 		//    a. Model each file in 'test' recursively

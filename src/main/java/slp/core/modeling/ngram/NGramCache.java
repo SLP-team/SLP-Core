@@ -8,7 +8,6 @@ import java.util.Map;
 
 import slp.core.counting.trie.TrieCounter;
 import slp.core.modeling.AbstractModel;
-import slp.core.modeling.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
@@ -43,13 +42,11 @@ public class NGramCache extends AbstractModel {
 	public void learnToken(List<Integer> input, int index) {
 		if (this.capacity == 0) return;
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		if (sequence.size() == ModelRunner.getNGramOrder() || index == input.size() - 1) {
-			this.cache.addLast(sequence);
-			this.model.counter.count(sequence);
-		}
+		this.cache.addLast(sequence);
+		for (int i = 0; i < sequence.size(); i++) this.model.counter.count(sequence.subList(i, sequence.size()));
 		if (this.cache.size() > this.capacity) {
 			List<Integer> removed = this.cache.removeFirst();
-			this.model.counter.unCount(removed);
+			for (int i = 0; i < removed.size(); i++) this.model.counter.unCount(removed.subList(i, removed.size()));
 		}
 	}
 
