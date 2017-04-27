@@ -101,8 +101,11 @@ public class ModelRunner {
 		return predictionCutoff;
 	}
 
-	private static int[] counts;
-	private static long[] t;
+	private static int[] counts = new int[2];
+	private static long[] t = new long[1];
+	private static double[] ent = new double[1];
+	private static double[] mrr = new double[1];
+
 	public static void learn(Model model, File file) {
 		counts = new int[] { 0, 0 };
 		t = new long[] { -System.currentTimeMillis() };
@@ -193,7 +196,6 @@ public class ModelRunner {
 		}
 	}
 
-	private static double[] ent;
 	public static Stream<Pair<File, List<List<Double>>>> model(Model model, File file) {
 		counts = new int[] { 0, 0 };
 		ent = new double[] { 0.0 };
@@ -262,7 +264,6 @@ public class ModelRunner {
 		return probabilities;
 	}
 
-	private static double[] mrr;
 	public static Stream<Pair<File, List<List<Double>>>> predict(Model model, File file) {
 		counts = new int[] { 0, 0 };
 		mrr = new double[]  { 0.0 };
