@@ -122,20 +122,11 @@ public class TrieCounterData {
 	 * Map bookkeeping
 	 */
 	private int getSuccIx(int key) {
-		return altBinSearch(key, 0, this.indices.length);
-	}
-	
-	// Binary search with slightly modified 'mid' guess, based on sorted property of indices, otherwise based on java.util.Arrays.binarySearch0
-	private int altBinSearch(int key, int low, int high) {
-    	int mid = key >= high || key <= low ? (high + low) >>> 1 : key - 1;
-        while (low <= high) {
-            int midVal = this.indices[mid];
-            if (midVal == key) return mid;
-            if (midVal < key) low = mid + 1;
-			else high = mid - 1;
-        	mid = (high + low) >>> 1;
-        }
-        return -(low + 1);  // key not found.
+		// Quickly check if key is stored at its purely sequential location; the 'root' trie is usually
+		// populated with the whole vocabulary in order up to some point, so a quick guess can save time.
+		if (key < 1000 && key <= this.indices.length && this.indices[key - 1] == key) return key - 1;
+		// Otherwise, binary search will do
+		return Arrays.binarySearch(this.indices, key);
 	}
 
 	Object getSuccessor(Integer key) {

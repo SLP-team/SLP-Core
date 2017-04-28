@@ -28,7 +28,7 @@ public class NestedModel extends AbstractModel {
 		this.files = new ArrayList<>();
 		this.models = new ArrayList<>();
 		
-		Model local = fromGlobal();
+		Model local = fromGlobal(true);
 		ModelRunner.learn(local, testRoot);
 		this.files.add(testRoot);
 		this.models.add(local);
@@ -48,9 +48,8 @@ public class NestedModel extends AbstractModel {
 			else {
 				return this.global.getClass().newInstance();
 			}
-		} catch (InstantiationException | IllegalAccessException
-				| IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException
-				e) {
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException | NoSuchMethodException | SecurityException e) {
 			e.printStackTrace();
 			return NGramModel.standard();
 		}
@@ -59,9 +58,8 @@ public class NestedModel extends AbstractModel {
 	@Override
 	public void notify(File next) {
 		List<File> lineage = getLineage(next);
-		if (lineage == null) return;
 		// If lineage is empty, the current model is the (first meaningful) parent of next and is appropriate
-		if (lineage.isEmpty()) return;
+		if (lineage == null || lineage.isEmpty()) return;
 		int pos = 1;
 		for (; pos < this.files.size(); pos++) {
 			if (pos >= lineage.size() || !this.files.get(pos).equals(lineage.get(pos))) {
@@ -109,6 +107,7 @@ public class NestedModel extends AbstractModel {
 
 	@Override
 	public void learn(List<Integer> input) {
+		// Tentatively, only the global model is updated dynamically
 		this.global.learn(input);
 	}
 
@@ -120,6 +119,7 @@ public class NestedModel extends AbstractModel {
 
 	@Override
 	public void forget(List<Integer> input) {
+		// Tentatively, only the global model is updated dynamically
 		this.global.forget(input);
 	}
 

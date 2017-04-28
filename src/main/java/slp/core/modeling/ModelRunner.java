@@ -103,12 +103,6 @@ public class ModelRunner {
 
 	private static int[] learnCounts = new int[2];
 	private static long[] learnTime = new long[1];
-	
-	private static int[] modelCounts = new int[2];
-	private static long[] modelTime = new long[1];
-	
-	private static double[] ent = new double[1];
-	private static double[] mrr = new double[1];
 
 	public static void learn(Model model, File file) {
 		learnCounts = new int[] { 0, 0 };
@@ -131,7 +125,7 @@ public class ModelRunner {
 		}
 	}
 	
-	private static void learnFile(Model model, File f) {
+	public static void learnFile(Model model, File f) {
 		model.notify(f);
 		learnTokens(model, LexerRunner.lex(f));
 	}
@@ -165,7 +159,7 @@ public class ModelRunner {
 		}
 	}
 	
-	private static void forgetFile(Model model, File f) {
+	public static void forgetFile(Model model, File f) {
 		model.notify(f);
 		forgetTokens(model, LexerRunner.lex(f));
 	}
@@ -176,16 +170,22 @@ public class ModelRunner {
 				.map(List::stream)
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
-				.forEach(model::learn);
+				.forEach(model::forget);
 		}
 		else {
-			model.learn(lex.map(l -> l.collect(Collectors.toList()))
+			model.forget(lex.map(l -> l.collect(Collectors.toList()))
 				.map(List::stream)
 				.flatMap(Vocabulary::toIndices)
 				.collect(Collectors.toList()));
 		}
 	}
 
+	private static int[] modelCounts = new int[2];
+	private static long[] modelTime = new long[1];
+	
+	private static double[] ent = new double[1];
+	private static double[] mrr = new double[1];
+	
 	public static Stream<Pair<File, List<List<Double>>>> model(Model model, File file) {
 		modelCounts = new int[] { 0, 0 };
 		modelTime = new long[] { -System.currentTimeMillis() };
@@ -207,16 +207,26 @@ public class ModelRunner {
 		return null;
 	}
 
-	private static Pair<File, List<List<Double>>> modelFile(Model model, File f) {
+	public static Pair<File, List<List<Double>>> modelFile(Model model, File f) {
 		model.notify(f);
 		List<List<Double>> lineProbs = modelTokens(model, LexerRunner.lex(f));
 		return Pair.of(f, lineProbs);
 	}
 
-	private static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lex) {
+	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lex) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
-		if (!perLine) {
+		if (perLine) {
+			lineProbs = lex.map(Vocabulary::toIndices)
+				.map(l -> l.collect(Collectors.toList()))
+				.map(l -> modelSequence(model, l))
+				.collect(Collectors.toList());
+			DoubleSummaryStatistics stats = lineProbs.stream()
+					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+					.mapToDouble(l -> l).summaryStatistics();
+			ent[0] += stats.getSum();
+			modelCounts[1] += stats.getCount();
+		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = modelSequence(model, lex
 				.map(Vocabulary::toIndices)
@@ -230,29 +240,18 @@ public class ModelRunner {
 			ent[0] += stats.getSum();
 			modelCounts[1] += stats.getCount();
 		}
-		else {
-			lineProbs = lex.map(Vocabulary::toIndices)
-				.map(l -> l.collect(Collectors.toList()))
-				.map(l -> modelSequence(model, l))
-				.collect(Collectors.toList());
-			DoubleSummaryStatistics stats = lineProbs.stream()
-					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-					.mapToDouble(l -> l).summaryStatistics();
-			ent[0] += stats.getSum();
-			modelCounts[1] += stats.getCount();
-		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
 	}
 
 	private static List<Double> modelSequence(Model model, List<Integer> tokens) {
 		if (selfTesting) model.forget(tokens);
-		List<Double> probabilities = model.model(tokens).stream()
+		List<Double> entropies = model.model(tokens).stream()
 			.map(ModelRunner::toProb)
 			.map(ModelRunner::toEntropy)
 			.collect(Collectors.toList());
 		if (selfTesting) model.learn(tokens);
-		return probabilities;
+		return entropies;
 	}
 
 	public static Stream<Pair<File, List<List<Double>>>> predict(Model model, File file) {
@@ -276,16 +275,27 @@ public class ModelRunner {
 		return null;
 	}
 
-	private static Pair<File, List<List<Double>>> predictFile(Model model, File f) {
+	public static Pair<File, List<List<Double>>> predictFile(Model model, File f) {
 		model.notify(f);
 		List<List<Double>> lineProbs = predictTokens(model, LexerRunner.lex(f));
 		return Pair.of(f, lineProbs);
 	}
 
-	private static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lex) {
+	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lex) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
-		if (!perLine) {
+		if (perLine) {
+			lineProbs = lex
+				.map(Vocabulary::toIndices)
+				.map(l -> l.collect(Collectors.toList()))
+				.map(l -> predictSequence(model, l))
+				.collect(Collectors.toList());
+			DoubleSummaryStatistics stats = lineProbs.stream()
+					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+					.mapToDouble(l -> l).summaryStatistics();
+			mrr[0] += stats.getSum();
+			modelCounts[0] += stats.getCount();
+		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = predictSequence(model, lex
 				.map(Vocabulary::toIndices)
@@ -295,18 +305,6 @@ public class ModelRunner {
 			lineProbs = toLines(modeled, lineLengths);
 			DoubleSummaryStatistics stats = modeled.stream()
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
-					.mapToDouble(l -> l).summaryStatistics();
-			mrr[0] += stats.getSum();
-			modelCounts[0] += stats.getCount();
-		}
-		else {
-			lineProbs = lex
-				.map(Vocabulary::toIndices)
-				.map(l -> l.collect(Collectors.toList()))
-				.map(l -> predictSequence(model, l))
-				.collect(Collectors.toList());
-			DoubleSummaryStatistics stats = lineProbs.stream()
-					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
 					.mapToDouble(l -> l).summaryStatistics();
 			mrr[0] += stats.getSum();
 			modelCounts[0] += stats.getCount();

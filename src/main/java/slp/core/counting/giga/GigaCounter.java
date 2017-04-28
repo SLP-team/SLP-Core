@@ -200,12 +200,12 @@ public class GigaCounter implements Counter {
 		return counters;
 	}
 
-	private int compareLists(List<Integer> key, List<Integer> key2) {
-		for (int i = 0; i < key.size() && i < key2.size(); i++) {
-			int compare = Integer.compare(key.get(i), key2.get(i));
+	private int compareLists(List<Integer> key1, List<Integer> key2) {
+		for (int i = 0; i < key1.size() && i < key2.size(); i++) {
+			int compare = Integer.compare(key1.get(i), key2.get(i));
 			if (compare != 0) return compare;
 		}
-		return Integer.compare(key.size(), key2.size());
+		return Integer.compare(key1.size(), key2.size());
 	}
 
 	private int getAvailable() {
