@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
@@ -35,6 +36,7 @@ import slp.core.modeling.ngram.NGramModel;
 import slp.core.modeling.ngram.WBModel;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
+import slp.core.util.Pair;
 
 /**
  * Provides a command line interface to a runnable jar produced from this source code.
@@ -318,7 +320,7 @@ public class CLI {
 			}
 			else {
 				Map<File, List<List<Double>>> fileProbs = ModelRunner.model(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics stats = getStats(fileProbs);
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs);
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 						fileProbs.size(), stats.getCount(), stats.getAverage());
 				write(fileProbs);
@@ -346,7 +348,7 @@ public class CLI {
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Map<File, List<List<Double>>> fileProbs = ModelRunner.model(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics stats = getStats(fileProbs);
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs);
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 					fileProbs.size(), stats.getCount(), stats.getAverage());
 			write(fileProbs);
@@ -368,7 +370,7 @@ public class CLI {
 			}
 			else {
 				Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics stats = getStats(fileMRRs);
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs);
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 						fileMRRs.size(), stats.getCount(), stats.getAverage());
 				write(fileMRRs);
@@ -396,7 +398,7 @@ public class CLI {
 			ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics stats = getStats(fileMRRs);
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs);
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 					fileMRRs.size(), stats.getCount(), stats.getAverage());
 			write(fileMRRs);
@@ -423,22 +425,6 @@ public class CLI {
 			}
 		}
 		return null;
-	}
-
-	private static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
-		DoubleSummaryStatistics stats;
-		if (LexerRunner.isPerLine()) {
-			stats = fileProbs.values().stream()
-				.flatMap(f -> f.stream())
-				.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-				.mapToDouble(p -> p).summaryStatistics();
-		}
-		else {
-			stats = fileProbs.values().stream()
-				.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-				.mapToDouble(p -> p).summaryStatistics();
-		}
-		return stats;
 	}
 
 	private static void write(Map<File, List<List<Double>>> fileProbs) {

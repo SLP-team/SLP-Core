@@ -129,6 +129,10 @@ public class ModelRunner {
 		model.notify(f);
 		learnTokens(model, LexerRunner.lex(f));
 	}
+	
+	public static void learnLines(Model model, Stream<String> lines) {
+		learnTokens(model, LexerRunner.lex(lines));
+	}
 
 	public static void learnTokens(Model model, Stream<Stream<String>> lex) {
 		if (perLine) {
@@ -157,6 +161,10 @@ public class ModelRunner {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public static void forgetLines(Model model, Stream<String> lines) {
+		forgetTokens(model, LexerRunner.lex(lines));
 	}
 	
 	public static void forgetFile(Model model, File f) {
@@ -211,6 +219,10 @@ public class ModelRunner {
 		model.notify(f);
 		List<List<Double>> lineProbs = modelTokens(model, LexerRunner.lex(f));
 		return Pair.of(f, lineProbs);
+	}
+
+	public static List<List<Double>> modelLines(Model model, Stream<String> lines) {
+		return modelTokens(model, LexerRunner.lex(lines));
 	}
 
 	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lex) {
@@ -279,6 +291,10 @@ public class ModelRunner {
 		model.notify(f);
 		List<List<Double>> lineProbs = predictTokens(model, LexerRunner.lex(f));
 		return Pair.of(f, lineProbs);
+	}
+
+	public static List<List<Double>> predictLines(Model model, Stream<String> lines) {
+		return predictTokens(model, LexerRunner.lex(lines));
 	}
 
 	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lex) {
@@ -359,5 +375,25 @@ public class ModelRunner {
 			perLine.add(line);
 		}
 		return perLine;
+	}
+	
+	public static DoubleSummaryStatistics getStats(Stream<Pair<File, List<List<Double>>>> fileProbs) {
+		return getStats(fileProbs.collect(Collectors.toMap(p -> p.left, p -> p.right)));
+	}
+
+	public static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
+		DoubleSummaryStatistics stats;
+		if (LexerRunner.isPerLine()) {
+			stats = fileProbs.values().stream()
+				.flatMap(f -> f.stream())
+				.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+				.mapToDouble(p -> p).summaryStatistics();
+		}
+		else {
+			stats = fileProbs.values().stream()
+				.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
+				.mapToDouble(p -> p).summaryStatistics();
+		}
+		return stats;
 	}
 }
