@@ -24,7 +24,7 @@ public class NGramCache extends AbstractModel {
 	}
 
 	public NGramCache(int capacity) {
-		this.model = NGramModel.standard(new TrieCounter());
+		this.model = NGramModel.standard();
 		// A cache is dynamic by default and only acts statically in prediction tasks
 		setDynamic(true);
 		

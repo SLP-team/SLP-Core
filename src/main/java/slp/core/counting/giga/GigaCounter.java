@@ -129,7 +129,7 @@ public class GigaCounter implements Counter {
 		this.counter.unCount(indices);
 	}
 
-	private void resolve() {
+	private synchronized void resolve() {
 		if (this.counter != null) return;
 		while (IntStream.range(0, this.counters.size()).anyMatch(i -> this.occupied[i]));
 		this.counters.forEach(this::pack);

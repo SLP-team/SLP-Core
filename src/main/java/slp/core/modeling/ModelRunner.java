@@ -134,9 +134,9 @@ public class ModelRunner {
 		learnTokens(model, LexerRunner.lex(lines));
 	}
 
-	public static void learnTokens(Model model, Stream<Stream<String>> lex) {
+	public static void learnTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
-			lex.map(l -> l.collect(Collectors.toList()))
+			lexed.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> learnCounts[1] += l.size())
 				.map(List::stream)
 				.map(Vocabulary::toIndices)
@@ -144,7 +144,7 @@ public class ModelRunner {
 				.forEach(model::learn);
 		}
 		else {
-			model.learn(lex.map(l -> l.collect(Collectors.toList()))
+			model.learn(lexed.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> learnCounts[1] += l.size())
 				.map(List::stream)
 				.flatMap(Vocabulary::toIndices)

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
@@ -36,7 +35,6 @@ import slp.core.modeling.ngram.NGramModel;
 import slp.core.modeling.ngram.WBModel;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
-import slp.core.util.Pair;
 
 /**
  * Provides a command line interface to a runnable jar produced from this source code.

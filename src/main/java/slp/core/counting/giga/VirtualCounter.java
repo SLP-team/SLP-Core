@@ -48,12 +48,12 @@ public class VirtualCounter implements Counter {
 
 	@Override
 	public int getCountofCount(int n, int count) {
-		return this.counters.stream().parallel().mapToInt(c -> getCountofCount(n, count)).sum();
+		return this.counters.stream().mapToInt(c -> c.getCountofCount(n, count)).sum();
 	}
 
 	@Override
 	public int getSuccessorCount() {
-		return this.counters.stream().parallel().mapToInt(Counter::getSuccessorCount).sum();
+		return this.counters.stream().mapToInt(Counter::getSuccessorCount).sum();
 	}
 
 	@Override
@@ -63,8 +63,7 @@ public class VirtualCounter implements Counter {
 
 	@Override
 	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
-		return this.counters.stream().parallel()
-				.flatMap(c -> c.getTopSuccessors(indices, limit).stream()).collect(Collectors.toList());
+		return this.counters.stream().flatMap(c -> c.getTopSuccessors(indices, limit).stream()).collect(Collectors.toList());
 	}
 
 	@Override

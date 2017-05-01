@@ -77,7 +77,7 @@ public class TrieCounterData {
 
 	void addSucessor(List<Integer> indices, int index, int adj) {
 		if (adj < 0) {
-			System.out.println("Attempting to stored event with negative count: " + indices.subList(index, indices.size()));
+			System.out.println("Attempting to store new event with negative count: " + indices.subList(index, indices.size()));
 			return;
 		}
 		int[] singleton = new int[indices.size() - index];
@@ -124,7 +124,7 @@ public class TrieCounterData {
 	private int getSuccIx(int key) {
 		// Quickly check if key is stored at its purely sequential location; the 'root' trie is usually
 		// populated with the whole vocabulary in order up to some point, so a quick guess can save time.
-		if (key < 1000 && key <= this.indices.length && this.indices[key - 1] == key) return key - 1;
+		if (key > 0 && key < 1000 && key <= this.indices.length && this.indices[key - 1] == key) return key - 1;
 		// Otherwise, binary search will do
 		return Arrays.binarySearch(this.indices, key);
 	}

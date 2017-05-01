@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import slp.core.io.Reader;
 import slp.core.lexing.LexerRunner;
@@ -54,21 +55,26 @@ public class VocabularyRunner {
 	 * @return 
 	 */
 	public static void build(File root) {
-		int[] c = { 0 };
-		Map<String, Integer> counts = new LinkedHashMap<>();
 		try {
-			Files.walk(root.toPath())
-				.map(Path::toFile)
-				.filter(File::isFile)
-				.forEach(f -> {
-					if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
-					LexerRunner.lex(f).flatMap(l -> l)
-						.forEach(t -> counts.merge(t, 1, Integer::sum));
-				});
+			int[] c = { 0 };
+			Stream<String> tokens = Files.walk(root.toPath())
+					.map(Path::toFile).filter(File::isFile)
+					.peek(f -> {
+						if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
+					})
+					.flatMap(LexerRunner::lex)
+					.flatMap(l -> l);
+			build(tokens);
+			if (c[0] > 1000) System.out.println("Vocabulary constructed on " + c[0] + " files");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if (c[0] > 1000) System.out.println("Reading finished (" + c[0] + " files), sorting vocabulary");
+	}
+	
+	public static void build(Stream<String> tokens) {
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		tokens.forEach(t -> counts.merge(t, 1, Integer::sum));
+//		if (counts.size() > 1000) System.out.println("Reading finished, sorting vocabulary");
 		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
 			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
 			.collect(Collectors.toList());

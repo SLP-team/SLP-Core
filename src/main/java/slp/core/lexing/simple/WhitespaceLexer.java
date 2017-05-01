@@ -10,8 +10,7 @@ public class WhitespaceLexer implements Lexer {
 
 	@Override
 	public Stream<Stream<String>> lex(Stream<String> lines) {
-		return lines.map(line ->
-				Arrays.stream(line.split("\\s+")));
+		return lines.map(line -> Arrays.stream(line.split("\\s+")));
 	}
 	
 	@Override

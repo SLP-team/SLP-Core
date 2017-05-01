@@ -18,6 +18,14 @@ public abstract class MixModel implements Model {
 		this.left = model1;
 		this.right = model2;
 	}
+	
+	public Model getLeft() {
+		return this.left;
+	}
+	
+	public Model getRight() {
+		return this.right;
+	}
 
 	public void setLeft(Model model) {
 		this.left = model;

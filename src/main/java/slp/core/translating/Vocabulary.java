@@ -24,17 +24,25 @@ public class Vocabulary {
 	public static final String BOS = "<s>";
 	public static final String EOS = "</s>";
 	
-	static Map<String, Integer> wordIndices = new HashMap<>();
-	static List<String> words = new ArrayList<>();
-	static List<Integer> counts = new ArrayList<>();
-	private static boolean closed = false;
+	static Map<String, Integer> wordIndices;
+	static List<String> words;
+	static List<Integer> counts;
+	private static boolean closed;
 
-	static { addUnk(); }
+	static { reset(); }
 	
 	private static void addUnk() {
 		wordIndices.put(UNK, 0);
 		words.add(UNK);
 		counts.add(0);
+	}
+	
+	public static void reset() {
+		wordIndices = new HashMap<>();
+		words = new ArrayList<>();
+		counts = new ArrayList<>();
+		closed = false;
+		addUnk();
 	}
 	
 	public static int size() {

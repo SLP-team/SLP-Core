@@ -16,6 +16,8 @@ public class InverseMixModel extends MixModel {
 		if (res1.right.equals(0.0) && res2.right.equals(0.0)) {
 			return Pair.of(0.0, 0.0);
 		}
+		else if (res2.right.equals(0.0)) return res1;
+		else if (res1.right.equals(0.0)) return res2;
 		double lNorm = 1/(1 - res1.right);
 		double rNorm = 1/(1 - res2.right);
 		if (lNorm > 1000) lNorm = 1000;
