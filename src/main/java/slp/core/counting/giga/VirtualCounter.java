@@ -91,6 +91,7 @@ public class VirtualCounter implements Counter {
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		this.counters.clear();
 		int size = in.readInt();
 		for (int i = 0; i < size; i++) {
 			this.counters.add((TrieCounter) in.readObject());

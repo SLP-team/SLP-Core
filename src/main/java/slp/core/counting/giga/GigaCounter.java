@@ -234,6 +234,7 @@ public class GigaCounter implements Counter {
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		this.counter = new VirtualCounter();
 		this.counter.readExternal(in);
 	}
 }

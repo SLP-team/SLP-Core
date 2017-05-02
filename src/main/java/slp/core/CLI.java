@@ -75,6 +75,7 @@ public class CLI {
 	private static final String NESTED = "(-n|--nested)";
 
 	private static String[] arguments;
+	private static String mode;
 	
 	public static void main(String[] args) {
 		arguments = args;
@@ -90,7 +91,7 @@ public class CLI {
 		if (isSet(CLOSED)) Vocabulary.close();
 		if (isSet(ORDER)) ModelRunner.setNGramOrder(Integer.parseInt(getArg(ORDER)));
 
-		String mode = arguments[0];
+		mode = arguments[0];
 		switch (mode.toLowerCase()) {
 			case "lex": {
 				lex(); break;
@@ -204,10 +205,40 @@ public class CLI {
 		if (isSet(PER_LINE)) ModelRunner.perLine(true);
 		if (isSelf()) ModelRunner.selfTesting(true);
 	}
+	
+	private static String getTrain() {
+		return isSet(TRAIN) ? getArg(TRAIN) : "";
+	}
+
+	private static String getTest() {
+		return isSet(TEST) ? getArg(TEST) : "";
+	}
 
 	private static boolean isSelf() {
 		// Self testing if SELF has been set, or if TRAIN equal to TEST
 		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
+	}
+
+	private static Counter getCounter() {
+		if (!mode.equals("test") && !mode.equals("predict")) {
+			return isSet(GIGA) ? new GigaCounter() : new JMModel().getCounter();
+		}
+		else {
+			if (!isSet(COUNTER) || !new File(getArg(COUNTER)).exists()) {
+				System.out.println("No (valid) counter file given for test/predict mode! Specify one with --counter *path-to-counter*");
+				return null;
+			}
+			else {
+				return CountsReader.readCounter(new File(getArg(COUNTER)));
+			}
+		}
+	}
+
+	private static void loadVocabulary() {
+		String file = getArg(VOCABULARY);
+		if (file == null || file.isEmpty() || !new File(file).exists()) return;
+		if (isSet(CLOSED)) VocabularyRunner.close(true);
+		VocabularyRunner.read(new File(file));
 	}
 
 	private static Model getModel() {
@@ -222,8 +253,7 @@ public class CLI {
 	}
 	
 	private static NGramModel getNGramModel() {
-		Counter counter = isSet(COUNTER) ? CountsReader.readCounter(new File(getArg(COUNTER))) :
-			isSet(GIGA) ? new GigaCounter() : new JMModel().getCounter();
+		Counter counter = getCounter();
 		String modelName = getArg(MODEL);
 		NGramModel model;
 		if (modelName == null) model = new JMModel(counter);
@@ -235,13 +265,6 @@ public class CLI {
 		NGramModel.setStandard(model.getClass());
 		if (model instanceof JMModel || model instanceof WBModel) TrieCounterData.COUNT_OF_COUNTS_CUTOFF = 1;
 		return model;
-	}
-
-	private static void loadVocabulary() {
-		String file = getArg(VOCABULARY);
-		if (file == null || file.isEmpty() || !new File(file).exists()) return;
-		if (isSet(CLOSED)) VocabularyRunner.close(true);
-		VocabularyRunner.read(new File(file));
 	}
 
 	private static void lex() {
@@ -287,7 +310,7 @@ public class CLI {
 
 	private static void train() {
 		if (arguments.length >= 5) {
-			File inDir = new File(getArg(TRAIN));
+			File inDir = new File(getTrain());
 			File outFile = new File(getArg(COUNTER));
 			if (!inDir.exists()) {
 				System.err.println("Source path for training does not exist: " + inDir);
@@ -312,12 +335,9 @@ public class CLI {
 
 	private static void test() {
 		if (arguments.length >= 5) {
-			File inDir = new File(getArg(TEST));
-			File counterFile = new File(getArg(COUNTER));
+			File inDir = new File(getTest());
 			if (!inDir.exists()) {
 				System.err.println("Test path does not exist: " + inDir);
-			} else if (!counterFile.exists()) {
-				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
 				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
