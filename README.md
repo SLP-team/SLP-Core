@@ -13,13 +13,13 @@ Let's start with an example: imagine you are working on a web-app, and you open 
 But normal language models can't do this! They are usually trained once, often with limited dynamic updating, and they don't mix well either. We take a different route: we create models <em>on-demand</em> for every level of context, and wrote an algorithm that mixes all those models so that local ones are prioritized. That doesn't stop you from mixing with static models either: we actually found that mixing with an LSTM can further boost performance and hope to integrate these right into the library soon.
 
 ## So how exactly does the nested model get its probabilities?
-The nested model (`-n` flag on the Jar) produces models on the fly, one for each locality, and mixes them in such a way that the most local model (often a cache on the file itself) gets the final say. What that comes down to is this: when given a sequence, every model first takes that sequence and computes two things: a probability <em>p</em>, and a confidence <em>λ</em> in that probability. The confidence is the model telling you: how much information did I have for my statement? For n-grams, and especially Jelinek-Mercer smoothing, that often comes down to: what was the longest context I've seen? If that context is: `Bill bill = customer.`, you (and our local model) can probably guess that the next token is something like `getBill`. The local models would have seen this whole context, so their <em>λ</em> will be high, and our most local model will probably also predict `getBill` with a high probability, for instance if it's been used in the same file. Our global model might never even have seen `customer.` so it reports low confidence and leaves the local models to get the biggest say in their probabilities. On the other hand, the global model may have seen those rare patterns that have never been seen locally, so it's definitely helpful.
+The nested model (`-n` flag on the Jar) produces models on the fly, one for each locality, and mixes them in such a way that the most local model (often a cache on the file itself) gets the final say. What that comes down to is this (example calculation below): when given a sequence, every model first takes that sequence and computes two things: a probability <em>p</em> (calculated directly from the counts using MLE), and a confidence <em>λ</em> in that probability (which comes from the <em>smoothing</em> method used<sup>2</sup>). The confidence is the model telling you: how much information did I have for my statement? For n-grams, and especially Jelinek-Mercer smoothing, that often comes down to: what was the longest context I've seen? If that context is: `Bill bill = customer.`, you (and our local model) can probably guess that the next token is something like `getBill`. The local models would have seen this whole context, so their <em>λ</em> will be high, and our most local model will probably also predict `getBill` with a high probability, for instance if it's been used in the same file. Our global model might never even have seen `customer.` so it reports low confidence and leaves the local models to get the biggest say in their probabilities. On the other hand, the global model may have seen those rare patterns that have never been seen locally, so it's definitely helpful.
 
-Let's visualize the probability calculation for the example above (<em>p(`Bill bill = customer.getBill`</em>)) in a table with some (made-up but not unrealistic) values for <em>p</em> and <em>λ</em> , with all models on the left merging towards the right:
+Let's visualize the probability calculation for the example above (<em>p(`Bill bill = customer.getBill`</em>)) in a table with some (made-up but not unrealistic) values for <em>p</em> and <em>λ</em>. For instance, the Cache may get its 90% probability (p=0.9) by seeing `getBill` follow the context `Bill bill = customer.` 9 out of 10 times in the current file, and may get its 95% confidence (λ=0.95) from its smoothing method that is 95% sure in any context that it has seen 10 times. These <em>p</em> and <em>λ</em> values are then mixed from global to local (here from left to right):
 
-| Model     | <em>p / λ</em> | Merge global/Shipping | Merge Shipping/Billing | Merge Billing/Cache
+| Model     | <em>p / λ</em>  | Merge Global/Shipping | Merge Shipping/Billing | Merge Billing/Cache
 | ----------|-----------------|------------|--------------|-------------|
-| global    | 0.05 / 0.1      |            |              |             |
+| Global    | 0.05 / 0.1      |            |              |             |
 | Shipping  | 0.15 / 0.5      | 0.13 / 0.5 |              |             |
 | Billing   | 0.70  / 0.875   |            | 0.49 / 0.875 |             |
 | Cache     | 0.90  / 0.95    |            |              | 0.70 / 0.95 |
@@ -40,8 +40,9 @@ To get started with the command line API, simply download the Jar and type `java
 
 
 # New in version 0.2
-- Models are now mixed with a single confidence score per sequence.
-- Using Streams wherever possible means everything flows a lot faster
+- Models are now mixed with a single confidence score per sequence instead of one per context-length, making more mixing possible and faster with little-to-no accuracy loss!
+- Using Streams wherever possible means everything flows a lot faster and less memory is used.
 - Giga-counter and Virtual Counter support (use the --giga flag for CLI) allows counting of far larger corpora using an army of little counters.
 
 <sup>1</sup>If you are looking to replicate the FSE'17 submission results (which used version 0.1), see the "FSE'17 Replication" directory. However, if you want more information on how the code works, this is the page to be!
+<sup>2</sup>Smoothing is a common approach to combining n-gram probabilites for various <em>n</em> within one model
