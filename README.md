@@ -33,11 +33,9 @@ The key to efficiency in our many-models approach is that every model is count-b
 Lots of reasons! Any time you update a file, pull a new commit, switch to another package, your development context changes. We found that software developers are really good at grouping similar files in modules, packages, etc., and we want to reward that by teaching our models to capture exactly that structure.
 
 # Getting Started
-This core module contains everything needed to get started modeling language, including code to lex, build vocabularies, construct (complex) models and run those models, and other modules using this code are forthcoming.
+This core module contains everything needed to get started modeling language, including code to lex, build vocabularies, construct (complex) models and run those models. Other modules relying on Core for more exotic applications are forthcoming.
 
-The code ships as a Java library and comes with a JAR that serves as a command line API (currently v0.2). 
-To get started with the command line API, simply download the Jar and type `java -jar SLP-Core_v0.2.jar --help` to get your code modeling adventures started! 
-
+The code ships as a Java library and comes with a JAR (use v0.2) that serves as a command line API. To get started with the command line API, simply download the Jar and type `java -jar SLP-Core_v0.2.jar --help` to get your code modeling adventures started! To get started with the code as a library, either add the Jar to your dependencies or download the whole project and link it to yours. Have a look at slp.core.example to see how you would do all the setup for a natural language and a Java code example; it show-cases quite a few options that you can set.
 
 # New in version 0.2
 - Models are now mixed with a single confidence score per sequence instead of one per context-length, making more mixing possible and faster with little-to-no accuracy loss!
@@ -45,4 +43,5 @@ To get started with the command line API, simply download the Jar and type `java
 - Giga-counter and Virtual Counter support (use the --giga flag for CLI) allows counting of far larger corpora using an army of little counters.
 
 <sup>1</sup>If you are looking to replicate the FSE'17 submission results (which used version 0.1), see the "FSE'17 Replication" directory. However, if you want more information on how the code works, this is the page to be!
+
 <sup>2</sup>Smoothing is a common approach to combining n-gram probabilites for various <em>n</em> within one model
