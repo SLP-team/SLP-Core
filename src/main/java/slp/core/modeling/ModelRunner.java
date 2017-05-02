@@ -172,16 +172,16 @@ public class ModelRunner {
 		forgetTokens(model, LexerRunner.lex(f));
 	}
 
-	public static void forgetTokens(Model model, Stream<Stream<String>> lex) {
+	public static void forgetTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
-			lex.map(l -> l.collect(Collectors.toList()))
+			lexed.map(l -> l.collect(Collectors.toList()))
 				.map(List::stream)
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.forEach(model::forget);
 		}
 		else {
-			model.forget(lex.map(l -> l.collect(Collectors.toList()))
+			model.forget(lexed.map(l -> l.collect(Collectors.toList()))
 				.map(List::stream)
 				.flatMap(Vocabulary::toIndices)
 				.collect(Collectors.toList()));
@@ -225,11 +225,11 @@ public class ModelRunner {
 		return modelTokens(model, LexerRunner.lex(lines));
 	}
 
-	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lex) {
+	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
 		if (perLine) {
-			lineProbs = lex.map(Vocabulary::toIndices)
+			lineProbs = lexed.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.map(l -> modelSequence(model, l))
 				.collect(Collectors.toList());
@@ -240,7 +240,7 @@ public class ModelRunner {
 			modelCounts[1] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
-			List<Double> modeled = modelSequence(model, lex
+			List<Double> modeled = modelSequence(model, lexed
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> lineLengths.add(l.size()))
@@ -297,11 +297,11 @@ public class ModelRunner {
 		return predictTokens(model, LexerRunner.lex(lines));
 	}
 
-	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lex) {
+	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
 		if (perLine) {
-			lineProbs = lex
+			lineProbs = lexed
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.map(l -> predictSequence(model, l))
@@ -313,7 +313,7 @@ public class ModelRunner {
 			modelCounts[0] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
-			List<Double> modeled = predictSequence(model, lex
+			List<Double> modeled = predictSequence(model, lexed
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> lineLengths.add(l.size()))
@@ -378,7 +378,7 @@ public class ModelRunner {
 	}
 	
 	public static DoubleSummaryStatistics getStats(Stream<Pair<File, List<List<Double>>>> fileProbs) {
-		return getStats(fileProbs.collect(Collectors.toMap(p -> p.left, p -> p.right)));
+		return fileProbs.flatMap(p -> p.right.stream()).flatMap(l -> l.stream()).mapToDouble(p -> p).summaryStatistics();
 	}
 
 	public static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {

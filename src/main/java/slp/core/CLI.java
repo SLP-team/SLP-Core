@@ -5,9 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
@@ -35,6 +33,7 @@ import slp.core.modeling.ngram.NGramModel;
 import slp.core.modeling.ngram.WBModel;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
+import slp.core.util.Pair;
 
 /**
  * Provides a command line interface to a runnable jar produced from this source code.
@@ -203,8 +202,12 @@ public class CLI {
 
 	private static void setupModelRunner() {
 		if (isSet(PER_LINE)) ModelRunner.perLine(true);
-		if (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST))) ModelRunner.selfTesting(true);
-		else if ((isSet(TRAIN) ^ isSet(TEST)) && isSet(SELF)) ModelRunner.selfTesting(true);
+		if (isSelf()) ModelRunner.selfTesting(true);
+	}
+
+	private static boolean isSelf() {
+		// Self testing if SELF has been set, or if TRAIN equal to TEST
+		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
 	}
 
 	private static Model getModel() {
@@ -317,11 +320,15 @@ public class CLI {
 				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
-				Map<File, List<List<Double>>> fileProbs = ModelRunner.model(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs);
-				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
-						fileProbs.size(), stats.getCount(), stats.getAverage());
+				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
 				write(fileProbs);
+				int[] fileCount = { 0 };
+				DoubleSummaryStatistics stats = fileProbs.peek(p -> fileCount[0]++)
+						.flatMap(p -> p.right.stream())
+						.flatMap(l -> l.stream())
+						.mapToDouble(p -> p).summaryStatistics();
+				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
+						fileCount[0], stats.getCount(), stats.getAverage());
 			}
 		}
 		else {
@@ -343,13 +350,19 @@ public class CLI {
 				return;
 			}
 			NGramModel nGramModel = getNGramModel();
-			ModelRunner.learn(nGramModel, trainDir);
+			// If self-testing a nested model, simply don't train at all. Do disable 'self' so the ModelRunner won't untrain either.
+			if (isSelf() && isSet(NESTED)) ModelRunner.selfTesting(false);
+			else ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Map<File, List<List<Double>>> fileProbs = ModelRunner.model(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs);
-			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
-					fileProbs.size(), stats.getCount(), stats.getAverage());
+			Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(model, testDir);
 			write(fileProbs);
+			int[] fileCount = { 0 };
+			DoubleSummaryStatistics stats = fileProbs.peek(p -> fileCount[0]++)
+					.flatMap(p -> p.right.stream())
+					.flatMap(l -> l.stream())
+					.mapToDouble(p -> p).summaryStatistics();
+			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
+					fileCount[0], stats.getCount(), stats.getAverage());
 		}
 		else {
 			System.err.println("Not enough arguments given."
@@ -367,11 +380,15 @@ public class CLI {
 				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
-				Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(getModel(), inDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs);
-				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
-						fileMRRs.size(), stats.getCount(), stats.getAverage());
+				Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(getModel(), inDir);
 				write(fileMRRs);
+				int[] fileCount = { 0 };
+				DoubleSummaryStatistics stats = fileMRRs.peek(p -> fileCount[0]++)
+						.flatMap(p -> p.right.stream())
+						.flatMap(l -> l.stream())
+						.mapToDouble(p -> p).summaryStatistics();
+				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
+						fileCount[0], stats.getCount(), stats.getAverage());
 			}
 		}
 		else {
@@ -393,13 +410,19 @@ public class CLI {
 				return;
 			}
 			NGramModel nGramModel = getNGramModel();
-			ModelRunner.learn(nGramModel, trainDir);
+			// If self-testing a nested model, simply don't train at all. Do disable 'self' so the ModelRunner won't untrain either.
+			if (isSelf() && isSet(NESTED)) ModelRunner.selfTesting(false);
+			else ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Map<File, List<List<Double>>> fileMRRs = ModelRunner.predict(model, testDir).collect(Collectors.toMap(p -> p.left, p -> p.right));
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs);
-			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
-					fileMRRs.size(), stats.getCount(), stats.getAverage());
+			Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(model, testDir);
 			write(fileMRRs);
+			int[] fileCount = { 0 };
+			DoubleSummaryStatistics stats = fileMRRs.peek(p -> fileCount[0]++)
+					.flatMap(p -> p.right.stream())
+					.flatMap(l -> l.stream())
+					.mapToDouble(p -> p).summaryStatistics();
+			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
+					fileCount[0], stats.getCount(), stats.getAverage());
 		}
 		else {
 			System.err.println("Not enough arguments given."
@@ -425,24 +448,27 @@ public class CLI {
 		return null;
 	}
 
-	private static void write(Map<File, List<List<Double>>> fileProbs) {
+	private static void write(Stream<Pair<File, List<List<Double>>>> fileProbs) {
 		String out = getArg(VERBOSE);
 		if (out != null) {
 			try (FileWriter fw = new FileWriter(new File(out))) {
-				for (Entry<File, List<List<Double>>> entry : fileProbs.entrySet()) {
-					fw.append(entry.getKey() + "\n");
-					for (List<Double> line : entry.getValue()) {
-						for (int i = 0; i < line.size(); i++) {
-							Double d = line.get(i);
-							fw.append(String.format("%.6f", d));
-							if (i < line.size() - 1) fw.append('\t');
-							else fw.append('\n');
+				fileProbs.peek(p -> {
+					try {
+						fw.append(p.left.getAbsolutePath());
+						for (List<Double> line : p.right) {
+							for (int i = 0; i < line.size(); i++) {
+								fw.append(String.format("%.6f", line.get(i)));
+								if (i < line.size() - 1) fw.append('\t');
+								else fw.append('\n');
+							}
 						}
+					} catch (IOException e) {
 					}
-				}
+				});
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
+		
 	}
 }
