@@ -8,6 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
@@ -28,7 +29,6 @@ public class GigaCounter implements Counter {
 	
 	private final int procs;
 	private final ForkJoinPool fjp;
-	private int pointer;
 	private int[][] counts;
 	private volatile boolean[] occupied;
 
@@ -45,8 +45,7 @@ public class GigaCounter implements Counter {
 		this.counters = IntStream.range(0, this.procs).mapToObj(i -> new TrivialCounter()).collect(Collectors.toList());
 		this.occupied = new boolean[this.counters.size()];
 		this.counts = new int[this.counters.size()][2];
-		this.pointer = 0;
-		this.graveyard = new ArrayList<>();
+		this.graveyard = Collections.synchronizedList(new ArrayList<>());
 	}
 
 	@Override
@@ -97,7 +96,8 @@ public class GigaCounter implements Counter {
 			this.counter.countBatch(indices);
 		}
 		else {
-			int ptr = getAvailable();
+			int ptr = getNextAvailable();
+			this.occupied[ptr] = true;
 			this.fjp.submit(() -> {
 				testGraveYard(ptr);
 				indices.forEach(this.counters.get(ptr)::count);
@@ -113,7 +113,8 @@ public class GigaCounter implements Counter {
 			this.counter.count(indices);
 		}
 		else {
-			int ptr = getAvailable();
+			int ptr = getNextAvailable();
+			this.occupied[ptr] = true;
 			this.fjp.submit(() -> {
 				testGraveYard(ptr);
 				this.counters.get(ptr).count(indices);
@@ -160,9 +161,7 @@ public class GigaCounter implements Counter {
 					}
 				});
 			out.close();
-			synchronized (this.graveyard) {
-				this.graveyard.add(baos.toByteArray());
-			}
+			this.graveyard.add(baos.toByteArray());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -210,12 +209,11 @@ public class GigaCounter implements Counter {
 		return Integer.compare(key1.size(), key2.size());
 	}
 
-	private int getAvailable() {
-		while (this.occupied[this.pointer]) {
-			this.pointer = (this.pointer + 1) % this.counters.size();
+	private int getNextAvailable() {
+		int ptr = 0;
+		while (this.occupied[ptr]) {
+			ptr = (ptr + 1) % this.counters.size();
 		}
-		int ptr = this.pointer;
-		this.occupied[ptr] = true;
 		return ptr;
 	}
 
