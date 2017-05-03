@@ -343,10 +343,7 @@ public class CLI {
 				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
 				write(fileProbs);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = fileProbs.peek(p -> fileCount[0]++)
-						.flatMap(p -> p.right.stream())
-						.flatMap(l -> l.stream())
-						.mapToDouble(p -> p).summaryStatistics();
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -377,10 +374,7 @@ public class CLI {
 			Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(model, testDir);
 			write(fileProbs);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = fileProbs.peek(p -> fileCount[0]++)
-					.flatMap(p -> p.right.stream())
-					.flatMap(l -> l.stream())
-					.mapToDouble(p -> p).summaryStatistics();
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -403,10 +397,7 @@ public class CLI {
 				Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(getModel(), inDir);
 				write(fileMRRs);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = fileMRRs.peek(p -> fileCount[0]++)
-						.flatMap(p -> p.right.stream())
-						.flatMap(l -> l.stream())
-						.mapToDouble(p -> p).summaryStatistics();
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -437,10 +428,7 @@ public class CLI {
 			Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(model, testDir);
 			write(fileMRRs);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = fileMRRs.peek(p -> fileCount[0]++)
-					.flatMap(p -> p.right.stream())
-					.flatMap(l -> l.stream())
-					.mapToDouble(p -> p).summaryStatistics();
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -489,6 +477,5 @@ public class CLI {
 				e.printStackTrace();
 			}
 		}
-		
 	}
 }

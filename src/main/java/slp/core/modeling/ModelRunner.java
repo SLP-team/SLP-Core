@@ -369,7 +369,18 @@ public class ModelRunner {
 	}
 	
 	public static DoubleSummaryStatistics getStats(Stream<Pair<File, List<List<Double>>>> fileProbs) {
-		return fileProbs.flatMap(p -> p.right.stream()).flatMap(l -> l.stream()).mapToDouble(p -> p).summaryStatistics();
+		boolean skip = LexerRunner.addsSentenceMarkers();
+		if (LexerRunner.isPerLine()) {
+			return fileProbs
+					.flatMap(p -> p.right.stream())
+					.flatMap(l -> l.stream().skip(skip ? 1 : 0))
+					.mapToDouble(p -> p).summaryStatistics();
+		}
+		else {
+			return fileProbs
+					.flatMap(p -> p.right.stream().flatMap(l -> l.stream()).skip(skip ? 1 : 0))
+					.mapToDouble(p -> p).summaryStatistics();
+		}
 	}
 
 	public static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
