@@ -86,7 +86,7 @@ public class VirtualCounter implements Counter {
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		out.writeInt(this.counters.size());
-		for (Counter counter : this.counters) out.writeObject(counter);
+		for (TrieCounter counter : this.counters) counter.writeExternal(out);
 	}
 
 	@Override
@@ -94,7 +94,9 @@ public class VirtualCounter implements Counter {
 		this.counters.clear();
 		int size = in.readInt();
 		for (int i = 0; i < size; i++) {
-			this.counters.add((TrieCounter) in.readObject());
+			TrieCounter counter = new TrieCounter();
+			counter.readExternal(in);
+			this.counters.add(counter);
 		}
 	}
 }

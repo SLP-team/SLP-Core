@@ -160,7 +160,9 @@ public class GigaCounter implements Counter {
 					}
 				});
 			out.close();
-			this.graveyard.add(baos.toByteArray());
+			synchronized (this.graveyard) {
+				this.graveyard.add(baos.toByteArray());
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

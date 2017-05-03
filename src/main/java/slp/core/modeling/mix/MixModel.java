@@ -48,9 +48,21 @@ public abstract class MixModel implements Model {
 	}
 
 	@Override
+	public void learn(List<Integer> input) {
+		this.left.learn(input);
+		this.right.learn(input);
+	}
+
+	@Override
 	public void learnToken(List<Integer> input, int index) {
 		this.left.learnToken(input, index);
 		this.right.learnToken(input, index);
+	}
+	
+	@Override
+	public void forget(List<Integer> input) {
+		this.left.forget(input);
+		this.right.forget(input);
 	}
 
 	@Override

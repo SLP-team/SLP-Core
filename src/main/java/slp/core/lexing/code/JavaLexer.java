@@ -52,17 +52,19 @@ public class JavaLexer implements Lexer {
 				continue;
 			}
 			String val = new String(scanner.getCurrentTokenSource());
-			if (val.length() >= 15 && val.startsWith("\"")) {
-				val = "\"\"";
-			}
 			if (val.startsWith("\"") && val.endsWith("\"") && val.length() > 2) {
-				String body = val.substring(1, val.length() - 1);
-				body = body.replaceAll("\\\\", "\\\\\\\\");
-				body = body.replaceAll("\"", "\\\\\"");
-				body = body.replaceAll("\n", "\\n");
-				body = body.replaceAll("\r", "\\r");
-				body = body.replaceAll("\t", "\\t");
-				val = "\"" + body + "\"";
+				if (val.length() >= 15) {
+					val = "\"\"";
+				}
+				else {
+					String body = val.substring(1, val.length() - 1);
+					body = body.replaceAll("\\\\", "\\\\\\\\");
+					body = body.replaceAll("\"", "\\\\\"");
+					body = body.replaceAll("\n", "\\n");
+					body = body.replaceAll("\r", "\\r");
+					body = body.replaceAll("\t", "\\t");
+					val = "\"" + body + "\"";
+				}
 			}
 			else if (val.startsWith("\'") && val.endsWith("\'")) {
 				val = val.replaceAll("\n", "\\n");
@@ -70,7 +72,7 @@ public class JavaLexer implements Lexer {
 				val = val.replaceAll("\t", "\\t");
 			}
 			// For Java, we have to add heuristic check regarding breaking up >>
-			if (val.matches(">>+")) {
+			else if (val.matches(">>+")) {
 				boolean split = false;
 				for (int i = tokens.size() - 1; i >= 0; i--) {
 					String token = tokens.get(i);
@@ -118,10 +120,6 @@ public class JavaLexer implements Lexer {
 		return newText.toString();
 	}
 	
-	public boolean isIdentifier(String token) {
-		return !isKeyword(token) && token.matches(ID_REGEX);
-	}
-
 	private static final String ID_REGEX = "[a-zA-Z_$][a-zA-Z\\d_$]*";
 	private static final String HEX_REGEX = "0x([0-9a-fA-F]+_)*[0-9a-fA-F]+[lLfFdD]?";
 	private static final String BIN_REGEX = "0b([01]+_)*[01]+[lL]";

@@ -136,17 +136,13 @@ public class ModelRunner {
 
 	public static void learnTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
-			lexed.map(l -> l.collect(Collectors.toList()))
-				.peek(l -> learnCounts[1] += l.size())
-				.map(List::stream)
-				.map(Vocabulary::toIndices)
+			lexed.map(Vocabulary::toIndices)
+				.map(l -> l.peek(l2 -> learnCounts[1]++))
 				.map(l -> l.collect(Collectors.toList()))
 				.forEach(model::learn);
 		}
 		else {
-			model.learn(lexed.map(l -> l.collect(Collectors.toList()))
-				.peek(l -> learnCounts[1] += l.size())
-				.map(List::stream)
+			model.learn(lexed.map(l -> l.peek(l2 -> learnCounts[1]++))
 				.flatMap(Vocabulary::toIndices)
 				.collect(Collectors.toList()));
 		}
@@ -174,17 +170,12 @@ public class ModelRunner {
 
 	public static void forgetTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
-			lexed.map(l -> l.collect(Collectors.toList()))
-				.map(List::stream)
-				.map(Vocabulary::toIndices)
+			lexed.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.forEach(model::forget);
 		}
 		else {
-			model.forget(lexed.map(l -> l.collect(Collectors.toList()))
-				.map(List::stream)
-				.flatMap(Vocabulary::toIndices)
-				.collect(Collectors.toList()));
+			model.forget(lexed.flatMap(Vocabulary::toIndices).collect(Collectors.toList()));
 		}
 	}
 
@@ -245,12 +236,12 @@ public class ModelRunner {
 				.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> lineLengths.add(l.size()))
 				.flatMap(l -> l.stream()).collect(Collectors.toList()));
-			lineProbs = toLines(modeled, lineLengths);
 			DoubleSummaryStatistics stats = modeled.stream()
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
 					.mapToDouble(l -> l).summaryStatistics();
 			ent[0] += stats.getSum();
 			modelCounts[1] += stats.getCount();
+			lineProbs = toLines(modeled, lineLengths);
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;

@@ -51,7 +51,12 @@ public class NGramCache extends AbstractModel {
 	}
 
 	@Override
+	public void learn(List<Integer> input) { }
+	@Override
+	public void forget(List<Integer> input) { }
+	@Override
 	public void forgetToken(List<Integer> input, int index) { }
+
 
 	@Override
 	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {

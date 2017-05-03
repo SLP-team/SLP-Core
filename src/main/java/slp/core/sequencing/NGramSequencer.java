@@ -32,6 +32,7 @@ public class NGramSequencer {
 		}
 		return result;
 	}
+	
 	public static List<Integer> sequenceAt(List<Integer> tokens, int index) {
 		return tokens.subList(Math.max(0, index - ModelRunner.getNGramOrder() + 1), index + 1);
 	}
