@@ -229,7 +229,11 @@ public class CLI {
 				return null;
 			}
 			else {
-				return CountsReader.readCounter(new File(getArg(COUNTER)));
+				long t = System.currentTimeMillis();
+				System.out.println("Retrieving counter from file");
+				Counter counter = CountsReader.readCounter(new File(getArg(COUNTER)));
+				System.out.println("Counter retrieved in " + (System.currentTimeMillis() - t)/1000 + "s");
+				return counter;
 			}
 		}
 	}
@@ -238,6 +242,7 @@ public class CLI {
 		String file = getArg(VOCABULARY);
 		if (file == null || file.isEmpty() || !new File(file).exists()) return;
 		if (isSet(CLOSED)) VocabularyRunner.close(true);
+		if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
 		VocabularyRunner.read(new File(file));
 	}
 

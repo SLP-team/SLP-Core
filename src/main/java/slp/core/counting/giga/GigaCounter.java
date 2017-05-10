@@ -17,6 +17,24 @@ import java.util.stream.IntStream;
 import slp.core.counting.Counter;
 import slp.core.counting.trie.TrieCounter;
 
+/**
+ * Class for counting very large corpora.
+ * Helpful especially when needing to train once on a very large corpus with only none or 'normal-sized' updates afterwards
+ * (though mixing is quite fine).<br /><br />
+ * 
+ * Very large corpora cause slow-downs in both training and testing for the conventional {@link TrieCounter}
+ * due to garbage collection and binary-search lookup.
+ * The {@link GigaCounter} solves this in three ways:
+ * <ul>
+ * <li>It counts in parallel
+ * <li>It serializes batches of counted files into a single byte array at train-time (dramatically reducing gc overhead)
+ * <li>Finally, when done training it resolves the serialized counters in parallel into a {@link VirtualCounter} and defers all future calls to that object.
+ * </ul>
+ * The {@link VirtualCounter} in turn also has mechanisms to deal better with parallel updating and lookup than the {@link TrieCounter}.
+ * 
+ * @author Vincent Hellendoorn
+ *
+ */
 public class GigaCounter implements Counter {
 
 	private static final long serialVersionUID = 8266734684040886875L;
@@ -130,15 +148,16 @@ public class GigaCounter implements Counter {
 		this.counter.unCount(indices);
 	}
 
-	private synchronized void resolve() {
+	private void resolve() {
 		if (this.counter != null) return;
 		while (IntStream.range(0, this.counters.size()).anyMatch(i -> this.occupied[i]));
+		
+		if (this.graveyard.size() >= 10) System.out.println("Resolving to VirtualCounter");
+		long t = System.currentTimeMillis();
 		this.counters.forEach(this::pack);
 		this.counters.clear();
-		
-		long t = System.currentTimeMillis();
-		if (this.graveyard.size() >= 10) System.out.println("Resolving to VirtualCounter");
-		this.counter = new VirtualCounter(unPack());
+		this.counter = new VirtualCounter(16);
+		unPackAll();
 		if (this.graveyard.size() >= 10) System.out.println("Resolved in " + (System.currentTimeMillis() - t)/1000 + "s");
 	}
 
@@ -167,8 +186,7 @@ public class GigaCounter implements Counter {
 		}
 	}
 	
-	private List<TrieCounter> unPack() {
-		List<TrieCounter> counters = IntStream.range(0, 4*this.procs).mapToObj(i -> new TrieCounter()).collect(Collectors.toList());
+	private void unPackAll() {
 		int[] done = { 0 };
 		IntStream.range(0, this.procs)
 			.parallel()
@@ -178,14 +196,14 @@ public class GigaCounter implements Counter {
 						ByteArrayInputStream baos = new ByteArrayInputStream(this.graveyard.get(j));
 						ObjectInputStream in = new ObjectInputStream(baos);
 						int count = in.readInt();
-						counters.get(0).setCount(counters.get(0).getCount() + count);
+						this.counter.updateCount(count);
 						int size = in.readInt();
 						for (int q = 0; q < size; q++) {
 							int len = in.readInt();
 							List<Integer> key = new ArrayList<Integer>(len);
 							for (int k = 0; k < len; k++) key.add(in.readInt());
 							int freq = in.readInt();
-							counters.get(key.get(0) % counters.size()).update(key, freq);
+							this.counter.count(key, freq);
 						}
 						in.close();
 						this.graveyard.set(j, null);
@@ -198,7 +216,6 @@ public class GigaCounter implements Counter {
 				}
 			});
 		if (this.graveyard.size() >= 10) System.out.println();
-		return counters;
 	}
 
 	private int compareLists(List<Integer> key1, List<Integer> key2) {
@@ -234,7 +251,7 @@ public class GigaCounter implements Counter {
 
 	@Override
 	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		this.counter = new VirtualCounter();
+		this.counter = new VirtualCounter(0);
 		this.counter.readExternal(in);
 	}
 }
