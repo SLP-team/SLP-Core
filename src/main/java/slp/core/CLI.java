@@ -9,8 +9,7 @@ import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
-import slp.core.counting.io.CountsReader;
-import slp.core.counting.io.CountsWriter;
+import slp.core.counting.io.CounterIO;
 import slp.core.counting.trie.TrieCounterData;
 import slp.core.example.JavaRunner;
 import slp.core.example.NLRunner;
@@ -231,7 +230,7 @@ public class CLI {
 			else {
 				long t = System.currentTimeMillis();
 				System.out.println("Retrieving counter from file");
-				Counter counter = CountsReader.readCounter(new File(getArg(COUNTER)));
+				Counter counter = CounterIO.readCounter(new File(getArg(COUNTER)));
 				System.out.println("Counter retrieved in " + (System.currentTimeMillis() - t)/1000 + "s");
 				return counter;
 			}
@@ -326,10 +325,15 @@ public class CLI {
 			ModelRunner.learn(model, inDir);
 			// Since this is for training n-grams only, override ModelRunner's model for easy access to the counter
 			Counter counter = model.getCounter();
-			CountsWriter.writeCounter(counter, outFile);
+			long t = System.currentTimeMillis();
+			System.out.println("Writing counter to file");
+			CounterIO.writeCounter(counter, outFile);
+			System.out.println("Counter written in " + (System.currentTimeMillis() - t)/1000 + "s");
 			if (emptyVocab) {
+				System.out.println("Writing vocabulary to file");
 				File vocabFile = isSet(VOCABULARY) ? new File(getArg(VOCABULARY)) : new File(outFile.getParentFile(), "train.vocab");
 				VocabularyRunner.write(vocabFile);
+				System.out.println("Vocabulary written");
 			}
 		}
 		else {
