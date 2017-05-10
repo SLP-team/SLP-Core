@@ -15,7 +15,7 @@ public class TrieCounterData {
 	public Object[] successors;
 	
 	public static int COUNT_OF_COUNTS_CUTOFF = 3;
-	static int[][] nCounts = new int[ModelRunner.getNGramOrder()][4];
+	public static int[][] nCounts = new int[ModelRunner.getNGramOrder()][4];
 	private static final double GROWTH_FACTOR = 1.1;
 
 	public TrieCounterData(int initSize) {
@@ -57,13 +57,13 @@ public class TrieCounterData {
 			removeSucc(indices.get(index));
 		}
 		for (int i = index + 1; i <= indices.size(); i++) {
-			this.updateNCounts(i, successor[0], adj);
+			updateNCounts(i, successor[0], adj);
 		}
 	}
 
 	private TrieCounter promoteArrayToTrie(List<Integer> indices, int index, int[] successor) {
 		TrieCounter newNext = new TrieCounter(1);
-		newNext.setCount(successor[0]);
+		newNext.data.counts[0] = successor[0];
 		if (successor.length > 1) {
 			newNext.data.counts[1] = newNext.data.counts[0];
 			int[] temp = Arrays.copyOfRange(successor, 1, successor.length);
@@ -86,9 +86,9 @@ public class TrieCounterData {
 			singleton[i] = indices.get(index + i);
 		}
 		putSucc(indices.get(index), singleton);
-		updateCoCs(1, adj);
+		updateCoCs(adj, adj);
 		for (int i = index + 1; i <= indices.size(); i++) {
-			this.updateNCounts(i, 1, adj);
+			updateNCounts(i, adj, adj);
 		}
 	}
 
@@ -107,14 +107,14 @@ public class TrieCounterData {
 		}
 	}
 
-	void updateNCounts(int n, int count, int adj) {
+	public static synchronized void updateNCounts(int n, int count, int adj) {
 		if (n == 0) return;
-		if (count > 0 && count < 5) {
-			TrieCounterData.nCounts[n - 1][count - 1]++;
-		}
-		int prevCount = count - adj;
-		if (prevCount > 0 && prevCount < 5) {
-			TrieCounterData.nCounts[n - 1][prevCount - 1]--;
+		int[] toUpdate = nCounts[n - 1];
+		int currIndex = Math.min(count, toUpdate.length);
+		int prevIndex = Math.min(count - adj, toUpdate.length);
+		if (currIndex != prevIndex) {
+			if (currIndex > 0) toUpdate[currIndex - 1]++;
+			if (prevIndex > 0) toUpdate[prevIndex - 1]--;
 		}
 	}
 

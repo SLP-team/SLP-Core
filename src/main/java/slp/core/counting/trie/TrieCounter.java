@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -34,6 +35,7 @@ public class TrieCounter implements Counter, Externalizable {
 	public int getCount() {
 		return this.data.counts[0];
 	}
+	
 	public int getContextCount() {
 		return this.data.counts[1];
 	}
@@ -42,10 +44,6 @@ public class TrieCounter implements Counter, Externalizable {
 		if (successor == null) return 0;
 		else if (successor instanceof TrieCounter) return ((TrieCounter) successor).getCount();
 		else return ((int[]) successor)[0];
-	}
-	
-	public void setCount(int count) {
-		this.data.counts[0] = count;
 	}
 	
 	@Override
@@ -105,7 +103,7 @@ public class TrieCounter implements Counter, Externalizable {
 				int[] distinctCounts = new int[range];
 				if (ArrayStorage.checkPartialSequence(indices, index, successor)
 						&& !ArrayStorage.checkExactSequence(indices, index, successor)) {
-					distinctCounts[Math.min(range - 1, successor[0] - 1)]++;
+					distinctCounts[Math.min(range - 1, successor[0] - 1)] = 1;
 				}
 				return distinctCounts;
 			}
@@ -139,7 +137,7 @@ public class TrieCounter implements Counter, Externalizable {
 	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
 		return IntStream.range(0, this.data.indices.length)
 			.filter(i -> this.data.indices[i] != Integer.MAX_VALUE)
-			.mapToObj(i -> Pair.of(i, this.getCount(this.data.successors[i])))
+			.mapToObj(i -> Pair.of(this.data.indices[i], this.getCount(this.data.successors[i])))
 			.filter(p -> p.right != null && p.right > 0)
 			.sorted((p1, p2) -> -Integer.compare(p1.right, p2.right))
 			.limit(limit)
@@ -178,6 +176,10 @@ public class TrieCounter implements Counter, Externalizable {
 		update(indices, -1);
 	}
 
+	public void updateCount(int adj) {
+		update(Collections.emptyList(), adj);
+	}
+
 	public final void update(List<Integer> indices, int adj) {
 		update(indices, 0, adj);
 	}
@@ -193,7 +195,7 @@ public class TrieCounter implements Counter, Externalizable {
 			else this.data.addSucessor(indices, index, adj);
 		}
 		this.data.updateCount(adj, index == indices.size());
-		this.data.updateNCounts(index, this.getCount(), adj);
+		TrieCounterData.updateNCounts(index, this.getCount(), adj);
 	}
 
 	@Override
