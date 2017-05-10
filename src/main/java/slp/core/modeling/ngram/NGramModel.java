@@ -61,16 +61,22 @@ public abstract class NGramModel extends AbstractModel {
 	@Override
 	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		double prob = 0;
+		double probability = 0.0;
+		double mass = 0.0;
 		int hits = 0;
 		for (int i = sequence.size() - 1; i >= 0; i--) {
 			Pair<Double, Double> resN = this.modelWithConfidence(sequence.subList(i, sequence.size()));
 			if (resN.right == 0) break;
-			prob += resN.left*(1 << hits++);
+			double prob = resN.left;
+			double conf = resN.right;
+			mass = (1 - conf)*mass + conf;
+			probability = (1 - conf)*probability + conf*prob;
+			hits++;
 		}
-		prob /= (1 << hits) - 1;
-		double conf = (1 - Math.pow(2, -hits));
-		return Pair.of(prob, conf);
+		probability /= mass;
+		// In the new model, final confidence is same for all n-gram models, proportional to longest context seen
+		double confidence = (1 - Math.pow(2, -hits));
+		return Pair.of(probability, confidence);
 	}
 
 	@Override

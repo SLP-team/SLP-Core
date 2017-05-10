@@ -46,5 +46,4 @@ public class ADMModel extends NGramModel {
 		// Must divide MLE by lambda to match contract
 		return Pair.of(MLEDisc/lambda, lambda);
 	}
-
 }
