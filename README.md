@@ -7,13 +7,13 @@ We present the Software Language Processing (SLP) library + CLI, here to enable 
 3. [Getting Started](#started)
 4. [Release Notes](#release)
 
-## Why Model Code?<a name="why"></a>
+<a name="why"></a>## Why Model Code?
 Code is a kind of language, and language models are awesomely useful (think of Siri, auto-correct, chatbots; all powered by language models). In code, we are beginning to discover the benefits too: good language models enable great code completion, could actually help hunt down bugs, suggest better variable names and even help you get your pull requests accepted!
 
 But code is also very different from natural languages like English in some crucial ways: it is dynamic, rapidly evolving with every commit, adding new identifiers, methods, modules and even entire new libraries. It is also deeply hierarchical, with files in packages in modules in eco-systems, etc. Traditional language models are too static to deal with this, so we present SLP: a dynamic, scalable language modeling library.
 We don't just enable fluent language model mixing and updates, we boost modeling accuracy by up to a factor 4, outperforming some LSTMs, and getting even better when mixing with them!
 
-# FAQ: How does it work?<a name="faq"></a>
+<a name="faq"></a># FAQ: How does it work?
 Let's start with an example: imagine you are working on a web-app, and you open a file called "BillCustomer.java" in a package "Billing", with a neighboring package "Shipping". The moment you open that file, you'd like an accurate language model there for code completion, style suggestions, bug detection, you name it. The best model is one that <em>really gets</em> the context that you are working in, but what is that context? Firstly, the file itself of course; it's as specific as it gets. But it's not a lot of data for a good model; let's add all the other files in "Billing" as a second tier. After that, maybe all the files in "Shipping", then the rest of your system, and finally maybe all the other files in the world. Just like that, you have a five-tiered language model, from local to global, from specific and small, to general and huge.
 
 But normal language models can't do this! They are usually trained once, often with limited dynamic updating, and they don't mix well either. We take a different route: we create models <em>on-demand</em> for every level of context, and wrote an algorithm that mixes all those models so that local ones are prioritized. That doesn't stop you from mixing with static models either: we actually found that mixing with an LSTM can further boost performance and hope to integrate these right into the library soon.
@@ -38,7 +38,7 @@ The key to efficiency in our many-models approach is that every model is count-b
 ## When else would I update my model?
 Lots of reasons! Any time you update a file, pull a new commit, switch to another package, your development context changes. We found that software developers are really good at grouping similar files in modules, packages, etc., and we want to reward that by teaching our models to capture exactly that structure.
 
-# Getting Started<a name="started"></a>
+<a name="started"></a># Getting Started
 This core module contains everything needed to get started with modeling language, including code to lex files, build vocabularies, construct (complex) models and run those models. Other modules relying on Core for more exotic applications are forthcoming.
 
 ## Code API
@@ -110,7 +110,7 @@ Finally, the package also allows you to lex the text before running the rest of 
 &nbsp;&nbsp;&nbsp;&nbsp;`java -jar SLP-Core_v0.2.jar lex-ix train train-lexed-ix -v train.vocab -l java --delims`  
 
 
-# Release Notes<a name="release"></a>
+<a name="release"></a># Release Notes
 ## New in version 0.2
 - Models are now mixed with a single confidence score per sequence instead of one per context-length, making more mixing possible and faster with little-to-no accuracy loss!
 - Using Streams wherever possible means everything flows a lot faster and less memory is used.
