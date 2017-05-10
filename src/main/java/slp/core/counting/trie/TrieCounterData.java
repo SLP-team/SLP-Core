@@ -107,14 +107,18 @@ public class TrieCounterData {
 		}
 	}
 
-	public static synchronized void updateNCounts(int n, int count, int adj) {
+	public static void updateNCounts(int n, int count, int adj) {
 		if (n == 0) return;
 		int[] toUpdate = nCounts[n - 1];
 		int currIndex = Math.min(count, toUpdate.length);
 		int prevIndex = Math.min(count - adj, toUpdate.length);
 		if (currIndex != prevIndex) {
-			if (currIndex > 0) toUpdate[currIndex - 1]++;
-			if (prevIndex > 0) toUpdate[prevIndex - 1]--;
+			boolean updateCurr = currIndex > 0;
+			boolean updatePrev = prevIndex > 0;
+			synchronized (nCounts) {
+				if (updateCurr) toUpdate[currIndex - 1]++;
+				if (updatePrev) toUpdate[prevIndex - 1]--;	
+			}
 		}
 	}
 
