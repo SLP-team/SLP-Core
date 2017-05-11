@@ -367,19 +367,34 @@ public class ModelRunner {
 		}
 		return perLine;
 	}
-	
+
+	// TODO, invoke next method if possible
 	public static DoubleSummaryStatistics getStats(Stream<Pair<File, List<List<Double>>>> fileProbs) {
 		boolean skip = LexerRunner.addsSentenceMarkers();
 		if (LexerRunner.isPerLine()) {
-			return fileProbs
-					.flatMap(p -> p.right.stream())
+			return fileProbs.flatMap(p -> p.right.stream())
 					.flatMap(l -> l.stream().skip(skip ? 1 : 0))
 					.mapToDouble(p -> p).summaryStatistics();
 		}
 		else {
-			return fileProbs
-					.flatMap(p -> p.right.stream().flatMap(l -> l.stream()).skip(skip ? 1 : 0))
+			return fileProbs.flatMap(p -> p.right.stream()
+					.flatMap(l -> l.stream()).skip(skip ? 1 : 0))
 					.mapToDouble(p -> p).summaryStatistics();
 		}
 	}
+	
+	public static DoubleSummaryStatistics getStats(List<List<Double>> fileProbs) {
+		boolean skip = LexerRunner.addsSentenceMarkers();
+		if (LexerRunner.isPerLine()) {
+			return fileProbs.stream()
+					.flatMap(l -> l.stream().skip(skip ? 1 : 0))
+					.mapToDouble(p -> p).summaryStatistics();
+		}
+		else {
+			return fileProbs.stream()
+					.flatMap(l -> l.stream()).skip(skip ? 1 : 0)
+					.mapToDouble(p -> p).summaryStatistics();
+		}
+	}
+		
 }
