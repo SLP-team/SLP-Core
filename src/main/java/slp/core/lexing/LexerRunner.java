@@ -172,7 +172,7 @@ public class LexerRunner {
 						outDir.mkdirs();
 						try {
 							Stream<Stream<String>> lexed = lex(fIn);
-							Writer.writeTokens(fOut, lexed);
+							Writer.writeTokenized(fOut, lexed);
 						} catch (IOException e) {
 							System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);
 							e.printStackTrace();
