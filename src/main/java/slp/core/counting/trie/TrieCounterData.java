@@ -15,7 +15,7 @@ public class TrieCounterData {
 	public Object[] successors;
 	
 	public static int COUNT_OF_COUNTS_CUTOFF = 3;
-	public static int[][] nCounts = new int[ModelRunner.getNGramOrder()][4];
+	public volatile static int[][] nCounts = new int[ModelRunner.getNGramOrder()][4];
 	private static final double GROWTH_FACTOR = 1.1;
 
 	public TrieCounterData(int initSize) {
@@ -115,10 +115,10 @@ public class TrieCounterData {
 		if (currIndex != prevIndex) {
 			boolean updateCurr = currIndex > 0;
 			boolean updatePrev = prevIndex > 0;
-			synchronized (nCounts) {
+//			synchronized (nCounts) {
 				if (updateCurr) toUpdate[currIndex - 1]++;
 				if (updatePrev) toUpdate[prevIndex - 1]--;	
-			}
+//			}
 		}
 	}
 

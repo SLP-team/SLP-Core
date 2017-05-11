@@ -33,9 +33,9 @@
 			<version>3.0.3</version>
 		</dependency>
 		<dependency>
-		    <groupId>de.ruedigermoeller</groupId>
-		    <artifactId>fst</artifactId>
-		    <version>2.47</version>
+			<groupId>org.jboss.marshalling</groupId>
+			<artifactId>jboss-marshalling-river</artifactId>
+			<version>1.4.11.Final</version>
 		</dependency>
 	</dependencies>
 </project>

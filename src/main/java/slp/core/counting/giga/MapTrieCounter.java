@@ -56,7 +56,7 @@ public class MapTrieCounter implements Counter, Externalizable {
 	public int getCountofCount(int n, int count) {
 		return TrieCounterData.nCounts[n - 1][count - 1];
 	}
-
+	
 	@Override
 	public int[] getCounts(List<Integer> indices) {
 		if (indices.isEmpty()) return new int[] { getCount(), getCount() };
@@ -302,7 +302,7 @@ public class MapTrieCounter implements Counter, Externalizable {
 			}
 			else {
 				out.writeInt(-1);
-				out.writeObject((MapTrieCounter) o);
+				((MapTrieCounter) o).writeExternal(out);
 			}
 		}
 	}
@@ -320,7 +320,8 @@ public class MapTrieCounter implements Counter, Externalizable {
 			int code = in.readInt();
 			Object value;
 			if (code < 0) {
-				value = in.readObject();
+				value = new MapTrieCounter();
+				((MapTrieCounter) value).readExternal(in);
 				this.counts[1 + Math.min(((MapTrieCounter) value).getCount(), TrieCounterData.COUNT_OF_COUNTS_CUTOFF)]++;
 			}
 			else {

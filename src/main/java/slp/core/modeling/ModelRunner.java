@@ -382,20 +382,4 @@ public class ModelRunner {
 					.mapToDouble(p -> p).summaryStatistics();
 		}
 	}
-
-	public static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
-		DoubleSummaryStatistics stats;
-		if (LexerRunner.isPerLine()) {
-			stats = fileProbs.values().stream()
-				.flatMap(f -> f.stream())
-				.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-				.mapToDouble(p -> p).summaryStatistics();
-		}
-		else {
-			stats = fileProbs.values().stream()
-				.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-				.mapToDouble(p -> p).summaryStatistics();
-		}
-		return stats;
-	}
 }

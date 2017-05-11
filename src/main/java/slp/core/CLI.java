@@ -242,6 +242,7 @@ public class CLI {
 		if (file == null || file.isEmpty() || !new File(file).exists()) return;
 		if (isSet(CLOSED)) VocabularyRunner.close(true);
 		if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
+		System.out.println("Retrieving vocabulary from file");
 		VocabularyRunner.read(new File(file));
 	}
 
@@ -325,6 +326,8 @@ public class CLI {
 			ModelRunner.learn(model, inDir);
 			// Since this is for training n-grams only, override ModelRunner's model for easy access to the counter
 			Counter counter = model.getCounter();
+			// Force GigaCounter.resolve() (if applicable), just for accurate timings below
+			counter.getCount();
 			long t = System.currentTimeMillis();
 			System.out.println("Writing counter to file");
 			CounterIO.writeCounter(counter, outFile);
