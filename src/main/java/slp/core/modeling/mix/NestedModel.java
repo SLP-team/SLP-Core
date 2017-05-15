@@ -22,6 +22,10 @@ public class NestedModel extends AbstractModel {
 	
 	private Model mixed;
 
+	public NestedModel(File testRoot) {
+		this(testRoot, NGramModel.standard());
+	}
+	
 	public NestedModel(File testRoot, Model global) {
 		this.global = global;
 		Model local = fromGlobal(true);

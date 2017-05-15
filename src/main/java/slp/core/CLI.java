@@ -254,7 +254,7 @@ public class CLI {
 		if (isSet(NESTED) && isSet(TEST)) {
 			// When loading counter from file, nested self-testing should use 'm' as a local model instead with an empty global model.
 			// And since nested models take care of uncounting, we should 'turn off' self-testing now.
-			if (isSelf()) {
+			if (isSelf() && !isSet(TRAIN)) {
 				ModelRunner.selfTesting(false);
 				m = new NestedModel(new File(getArg(TEST)), NGramModel.standard(), m);
 			} else {
