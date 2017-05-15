@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
 import slp.core.counting.io.CounterIO;
-import slp.core.counting.trie.TrieCounterData;
+import slp.core.counting.trie.AbstractTrie;
 import slp.core.example.JavaRunner;
 import slp.core.example.NLRunner;
 import slp.core.lexing.Lexer;
@@ -251,7 +251,16 @@ public class CLI {
 	}
 
 	private static Model wrapModel(Model m) {
-		if (isSet(NESTED) && isSet(TEST)) m = new NestedModel(new File(getArg(TEST)), m);
+		if (isSet(NESTED) && isSet(TEST)) {
+			// When loading counter from file, nested self-testing should use 'm' as a local model instead with an empty global model.
+			// And since nested models take care of uncounting, we should 'turn off' self-testing now.
+			if (isSelf()) {
+				ModelRunner.selfTesting(false);
+				m = new NestedModel(new File(getArg(TEST)), NGramModel.standard(), m);
+			} else {
+				m = new NestedModel(new File(getArg(TEST)), m);
+			}
+		}
 		if (isSet(CACHE)) m = new InverseMixModel(m, new NGramCache());
 		if (isSet(DYNAMIC)) m.setDynamic(true);
 		return m;
@@ -268,7 +277,7 @@ public class CLI {
 		else if (modelName.toLowerCase().equals("adm")) model = new ADMModel(counter);
 		else model = new JMModel(counter);
 		NGramModel.setStandard(model.getClass());
-		if (model instanceof JMModel || model instanceof WBModel) TrieCounterData.COUNT_OF_COUNTS_CUTOFF = 1;
+		if (model instanceof JMModel || model instanceof WBModel) AbstractTrie.COUNT_OF_COUNTS_CUTOFF = 1;
 		return model;
 	}
 

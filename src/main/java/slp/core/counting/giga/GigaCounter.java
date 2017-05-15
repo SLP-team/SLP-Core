@@ -159,6 +159,7 @@ public class GigaCounter implements Counter {
 		this.counter = new VirtualCounter(16);
 		unPackAll();
 		if (this.graveyard.size() >= 10) System.out.println("Resolved in " + (System.currentTimeMillis() - t)/1000 + "s");
+		System.gc();
 	}
 
 	private void pack(TrivialCounter c) {

@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import slp.core.counting.Counter;
+import slp.core.counting.trie.MapTrieCounter;
 
 /**
  * Wraps multiple counters (specifically {@link MapTrieCounter}s) to support faster concurrent access 

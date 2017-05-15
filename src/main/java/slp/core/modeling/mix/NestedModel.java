@@ -21,15 +21,24 @@ public class NestedModel extends AbstractModel {
 	private List<File> files;
 	
 	private Model mixed;
-	
+
 	public NestedModel(File testRoot, Model global) {
+		this.global = global;
+		Model local = fromGlobal(true);
+		ModelRunner.learn(local, testRoot);
+
+		this.files = new ArrayList<>();
+		this.models = new ArrayList<>();
+		this.files.add(testRoot);
+		this.models.add(local);
+		this.mixed = makeMix();
+	}
+
+	public NestedModel(File testRoot, Model global, Model local) {
 		this.global = global;
 
 		this.files = new ArrayList<>();
 		this.models = new ArrayList<>();
-		
-		Model local = fromGlobal(true);
-		ModelRunner.learn(local, testRoot);
 		this.files.add(testRoot);
 		this.models.add(local);
 		this.mixed = makeMix();
