@@ -83,12 +83,9 @@ public class CLI {
 			printHelp();
 			return;
 		}
-		
 		setupLexerRunner();
+		setupVocabulary();
 		setupModelRunner();
-		if (isSet(VOCABULARY)) loadVocabulary();
-		if (isSet(CLOSED)) Vocabulary.close();
-		if (isSet(ORDER)) ModelRunner.setNGramOrder(Integer.parseInt(getArg(ORDER)));
 
 		mode = arguments[0];
 		switch (mode.toLowerCase()) {
@@ -187,6 +184,24 @@ public class CLI {
 		if (isSet(EXTENSION)) LexerRunner.useExtension(getArg(EXTENSION));
 	}
 
+	private static void setupVocabulary() {
+		if (isSet(VOCABULARY)) {
+			String file = getArg(VOCABULARY);
+			if (file == null || file.isEmpty() || !new File(file).exists()) return;
+			if (isSet(CLOSED)) VocabularyRunner.close(true);
+			if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
+			System.out.println("Retrieving vocabulary from file");
+			VocabularyRunner.read(new File(file));
+		}
+		if (isSet(CLOSED)) Vocabulary.close();
+	}
+
+	private static void setupModelRunner() {
+		if (isSet(PER_LINE)) ModelRunner.perLine(true);
+		if (isSelf()) ModelRunner.selfTesting(true);
+		if (isSet(ORDER)) ModelRunner.setNGramOrder(Integer.parseInt(getArg(ORDER)));
+	}
+
 	private static Lexer getLexer() {
 		String language = getArg(LANGUAGE);
 		Lexer lexer;
@@ -198,24 +213,6 @@ public class CLI {
 		else lexer = new PunctuationLexer();
 		System.out.println("Using lexer " + lexer.getClass().getSimpleName());
 		return lexer;
-	}
-
-	private static void setupModelRunner() {
-		if (isSet(PER_LINE)) ModelRunner.perLine(true);
-		if (isSelf()) ModelRunner.selfTesting(true);
-	}
-	
-	private static String getTrain() {
-		return isSet(TRAIN) ? getArg(TRAIN) : "";
-	}
-
-	private static String getTest() {
-		return isSet(TEST) ? getArg(TEST) : "";
-	}
-
-	private static boolean isSelf() {
-		// Self testing if SELF has been set, or if TRAIN equal to TEST
-		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
 	}
 
 	private static Counter getCounter() {
@@ -237,17 +234,23 @@ public class CLI {
 		}
 	}
 
-	private static void loadVocabulary() {
-		String file = getArg(VOCABULARY);
-		if (file == null || file.isEmpty() || !new File(file).exists()) return;
-		if (isSet(CLOSED)) VocabularyRunner.close(true);
-		if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
-		System.out.println("Retrieving vocabulary from file");
-		VocabularyRunner.read(new File(file));
-	}
-
 	private static Model getModel() {
 		return wrapModel(getNGramModel());
+	}
+
+	private static NGramModel getNGramModel() {
+		Counter counter = getCounter();
+		String modelName = getArg(MODEL);
+		NGramModel model;
+		if (modelName == null) model = new JMModel(counter);
+		else if (modelName.toLowerCase().equals("jm")) model = new JMModel(counter);
+		else if (modelName.toLowerCase().equals("wb")) model = new WBModel(counter);
+		else if (modelName.toLowerCase().equals("ad")) model = new ADModel(counter);
+		else if (modelName.toLowerCase().equals("adm")) model = new ADMModel(counter);
+		else model = new JMModel(counter);
+		NGramModel.setStandard(model.getClass());
+		if (model instanceof JMModel || model instanceof WBModel) AbstractTrie.COUNT_OF_COUNTS_CUTOFF = 1;
+		return model;
 	}
 
 	private static Model wrapModel(Model m) {
@@ -265,21 +268,6 @@ public class CLI {
 		if (isSet(DYNAMIC)) m.setDynamic(true);
 		return m;
 	}
-	
-	private static NGramModel getNGramModel() {
-		Counter counter = getCounter();
-		String modelName = getArg(MODEL);
-		NGramModel model;
-		if (modelName == null) model = new JMModel(counter);
-		else if (modelName.toLowerCase().equals("jm")) model = new JMModel(counter);
-		else if (modelName.toLowerCase().equals("wb")) model = new WBModel(counter);
-		else if (modelName.toLowerCase().equals("ad")) model = new ADModel(counter);
-		else if (modelName.toLowerCase().equals("adm")) model = new ADMModel(counter);
-		else model = new JMModel(counter);
-		NGramModel.setStandard(model.getClass());
-		if (model instanceof JMModel || model instanceof WBModel) AbstractTrie.COUNT_OF_COUNTS_CUTOFF = 1;
-		return model;
-	}
 
 	private static void lex() {
 		lex(false);
@@ -289,7 +277,6 @@ public class CLI {
 		if (arguments.length >= 3) {
 			File inDir = new File(arguments[1]);
 			File outDir = new File(arguments[2]);
-			if (!outDir.exists()) outDir.mkdirs();
 			LexerRunner.preTranslate(translate);
 			boolean emptyVocab = Vocabulary.size() <= 1;
 			LexerRunner.lexDirectory(inDir, outDir);
@@ -459,14 +446,14 @@ public class CLI {
 		}		
 	}
 
-	static boolean isSet(String arg) {
+	private static boolean isSet(String arg) {
 		for (String a : arguments) {
 			if (a.matches(arg)) return true;
 		}
 		return false;
 	}
 
-	static String getArg(String arg) {
+	private static String getArg(String arg) {
 		for (int i = 1; i < arguments.length; i++) {
 			String a = arguments[i];
 			if (a.matches(arg)) {
@@ -475,6 +462,19 @@ public class CLI {
 			}
 		}
 		return null;
+	}
+
+	private static String getTrain() {
+		return isSet(TRAIN) ? getArg(TRAIN) : "";
+	}
+
+	private static String getTest() {
+		return isSet(TEST) ? getArg(TEST) : "";
+	}
+
+	private static boolean isSelf() {
+		// Self testing if SELF has been set, or if TRAIN equal to TEST
+		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
 	}
 
 	private static void write(Stream<Pair<File, List<List<Double>>>> fileProbs) {
