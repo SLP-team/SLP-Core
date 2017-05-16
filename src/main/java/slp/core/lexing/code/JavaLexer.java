@@ -5,8 +5,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -18,7 +16,7 @@ import org.eclipse.jdt.core.compiler.InvalidInputException;
 import slp.core.lexing.Lexer;
 
 public class JavaLexer implements Lexer {
-
+	
 	@Override
 	public Stream<Stream<String>> lex(List<String> lines) {
 		String text = lines.stream().collect(Collectors.joining("\n"));
@@ -26,13 +24,7 @@ public class JavaLexer implements Lexer {
 	}
 
 	public List<List<String>> tokenizeLines(String text) {
-		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.4", "1.5");
-		String temp = filterUnTokenizable(text);
-		while (temp != null) {
-			text = temp;
-			temp = filterUnTokenizable(text);
-		}
-		
+		IScanner scanner = ToolFactory.createScanner(false, false, true, "1.8");
 		scanner.setSource(text.toCharArray());
 		List<List<String>> lineTokens = new ArrayList<>();
 		List<String> tokens = new ArrayList<>();
@@ -103,23 +95,6 @@ public class JavaLexer implements Lexer {
 		return lineTokens;
 	}
 
-	private String filterUnTokenizable(String text) {
-		// Have to first filter out underscores in numerals as tokenizer doesn't support SE 7 standard
-		Pattern p = Pattern.compile("([0-9]_[0-9]|0b[01])");
-		Matcher m = p.matcher(text);
-		StringBuilder newText = new StringBuilder();
-		int prev = 0;
-		boolean foundAny = false;
-		while (m.find()) {
-			newText.append(text.substring(prev, m.start() + 1));
-			prev = m.end() - 1;
-			foundAny = true;
-		}
-		if (!foundAny) return null;
-		newText.append(text.substring(prev, text.length()));
-		return newText.toString();
-	}
-	
 	private static final String ID_REGEX = "[a-zA-Z_$][a-zA-Z\\d_$]*";
 	private static final String HEX_REGEX = "0x([0-9a-fA-F]+_)*[0-9a-fA-F]+[lLfFdD]?";
 	private static final String BIN_REGEX = "0b([01]+_)*[01]+[lL]";
