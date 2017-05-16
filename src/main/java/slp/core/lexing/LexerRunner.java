@@ -114,42 +114,6 @@ public class LexerRunner {
 	}
 	
 	/**
-	 * Lex the provided file to a stream of tokens per line.
-	 * <br />
-	 * <em>Note:</em> returns empty stream if the file does not match this builder's regex
-	 * (which accepts everything unless set otherwise in {@link #useRegex(String)}).
-	 * @param file File to lex
-	 */
-	public static Stream<Stream<String>> lex(File file) {
-		if (file.getName().matches(regex)) return lex(Reader.readLines(file));
-		else return Stream.empty();
-	}
-	
-	/**
-	 * Lex the provided lines (see {@link slp.core.io.Reader}) to a stream of tokens per line, possibly adding delimiters
-	 * @param lines Lines to lex
-	 * @return A Stream of lines containing a Stream of tokens each
-	 */
-	public static Stream<Stream<String>> lex(Stream<String> lines) {
-		Stream<Stream<String>> lexed = lexer.lex(lines).map(l -> !translate ? l : l.map(t -> ""+Vocabulary.toIndex(t)));
-		if (sentenceMarkers) return withDelimiters(lexed);
-		else return lexed;
-	}
-
-	private static Stream<Stream<String>> withDelimiters(Stream<Stream<String>> lexed) {
-		if (perLine) {
-			return lexed.map(l -> Stream.concat(Stream.of(Vocabulary.BOS), Stream.concat(l, Stream.of(Vocabulary.EOS))));
-		}
-		else {
-			// Concatenate the BOS token with the first sub-stream (first line's stream) specifically to avoid off-setting all the lines.
-			// The EOS token is just appended as an extra line
-			int[] c = { 0 };
-			lexed = lexed.map(l -> c[0]++ < 1 ? Stream.concat(Stream.of(Vocabulary.BOS), l) : l);
-			return Stream.concat(lexed, Stream.of(Stream.of(Vocabulary.EOS)));
-		}
-	}
-	
-	/**
 	 * Lex a directory recursively, provided for convenience.
 	 * Creates a mirror-structure in 'to' that has the lexed (and translated if {@link #preTranslate()} is set) file for each input file
 	 * @param from Source file/directory to be lexed
@@ -182,25 +146,43 @@ public class LexerRunner {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-//		if (from.isFile()) {
-//			Stream<Stream<String>> lexed = lex(from);
-////			if (lexed.isEmpty()) return;
-//			try {
-//				Writer.writeTokens(to, lexed);
-//			} catch (IOException e) {
-//				System.out.println("Exception in LexerBuilder.tokenize(), from " + from + " to " + to);
-//				e.printStackTrace();
-//			}
-//		}
-//		else {
-//			for (String child : from.list()) {
-//				File fIn = new File(from, child);
-//				File fOut = new File(to, child);
-//				if (fIn.isDirectory()) {
-//					fOut.mkdir();
-//				}
-//				lexDirectory(fIn, fOut);
-//			}
-//		}
+	}
+
+	/**
+	 * Lex the provided file to a stream of tokens per line.
+	 * <br />
+	 * <em>Note:</em> returns empty stream if the file does not match this builder's regex
+	 * (which accepts everything unless set otherwise in {@link #useRegex(String)}).
+	 * @param file File to lex
+	 */
+	public static Stream<Stream<String>> lex(File file) {
+		if (file.getName().matches(regex)) return lex(Reader.readLines(file));
+		else return Stream.empty();
+	}
+	
+	/**
+	 * Lex the provided lines (see {@link slp.core.io.Reader}) to a stream of tokens per line, possibly adding delimiters
+	 * @param lines Lines to lex
+	 * @return A Stream of lines containing a Stream of tokens each
+	 */
+	public static Stream<Stream<String>> lex(Stream<String> lines) {
+		Stream<Stream<String>> lexed = lexer.lex(lines)
+				.map(l -> l.map(Vocabulary::toIndex))
+				.map(l -> l.map(t -> translate ? t+"" : Vocabulary.toWord(t)));
+		if (sentenceMarkers) return withDelimiters(lexed);
+		else return lexed;
+	}
+
+	private static Stream<Stream<String>> withDelimiters(Stream<Stream<String>> lexed) {
+		if (perLine) {
+			return lexed.map(l -> Stream.concat(Stream.of(Vocabulary.BOS), Stream.concat(l, Stream.of(Vocabulary.EOS))));
+		}
+		else {
+			// Concatenate the BOS token with the first sub-stream (first line's stream) specifically to avoid off-setting all the lines.
+			// The EOS token is just appended as an extra line
+			int[] c = { 0 };
+			lexed = lexed.map(l -> c[0]++ < 1 ? Stream.concat(Stream.of(Vocabulary.BOS), l) : l);
+			return Stream.concat(lexed, Stream.of(Stream.of(Vocabulary.EOS)));
+		}
 	}
 }

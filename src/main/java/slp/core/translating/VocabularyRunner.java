@@ -74,7 +74,6 @@ public class VocabularyRunner {
 	public static void build(Stream<String> tokens) {
 		Map<String, Integer> counts = new LinkedHashMap<>();
 		tokens.forEach(t -> counts.merge(t, 1, Integer::sum));
-//		if (counts.size() > 1000) System.out.println("Reading finished, sorting vocabulary");
 		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
 			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
 			.collect(Collectors.toList());
