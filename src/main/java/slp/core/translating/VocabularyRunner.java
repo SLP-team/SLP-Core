@@ -8,7 +8,7 @@ import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -58,7 +58,8 @@ public class VocabularyRunner {
 		try {
 			int[] c = { 0 };
 			Stream<String> tokens = Files.walk(root.toPath())
-					.map(Path::toFile).filter(File::isFile)
+					.map(Path::toFile)
+					.filter(File::isFile)
 					.peek(f -> {
 						if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
 					})
@@ -72,8 +73,9 @@ public class VocabularyRunner {
 	}
 	
 	public static void build(Stream<String> tokens) {
-		Map<String, Integer> counts = new LinkedHashMap<>();
+		Map<String, Integer> counts = new HashMap<>();
 		tokens.forEach(t -> counts.merge(t, 1, Integer::sum));
+		Vocabulary.reset();
 		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
 			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
 			.collect(Collectors.toList());
@@ -99,6 +101,7 @@ public class VocabularyRunner {
 	 * @return 
 	 */
 	public static void read(File file) {
+		Vocabulary.reset();
 		Reader.readLines(file)
 			.map(x -> x.split("\t", 3))
 			.filter(x -> Integer.parseInt(x[0]) >= cutOff)
