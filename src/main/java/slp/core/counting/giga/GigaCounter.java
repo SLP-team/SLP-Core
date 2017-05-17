@@ -9,7 +9,9 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -42,7 +44,7 @@ public class GigaCounter implements Counter {
 	private static final int FILES_PER_COUNTER = 100;
 	private static final int TOKENS_PER_COUNTER = 1000*FILES_PER_COUNTER;
 
-	private final List<TrivialCounter> counters;
+	private final List<Map<List<Integer>, Integer>> simpleCounters;
 	private List<byte[]> graveyard;
 	
 	private final int procs;
@@ -60,9 +62,9 @@ public class GigaCounter implements Counter {
 		this.procs = procs;
 		this.fjp = new ForkJoinPool(this.procs);
 		
-		this.counters = IntStream.range(0, this.procs).mapToObj(i -> new TrivialCounter()).collect(Collectors.toList());
-		this.occupied = new boolean[this.counters.size()];
-		this.counts = new int[this.counters.size()][2];
+		this.simpleCounters = IntStream.range(0, this.procs).mapToObj(i -> new HashMap<List<Integer>, Integer>()).collect(Collectors.toList());
+		this.occupied = new boolean[this.simpleCounters.size()];
+		this.counts = new int[this.simpleCounters.size()][2];
 		this.graveyard = Collections.synchronizedList(new ArrayList<>());
 	}
 
@@ -118,7 +120,7 @@ public class GigaCounter implements Counter {
 			this.occupied[ptr] = true;
 			this.fjp.submit(() -> {
 				testGraveYard(ptr);
-				indices.forEach(this.counters.get(ptr)::count);
+				indices.forEach(ix -> this.simpleCounters.get(ptr).merge(ix, 1, Integer::sum));
 				this.counts[ptr][0]++;
 				this.occupied[ptr] = false;
 			});
@@ -135,7 +137,7 @@ public class GigaCounter implements Counter {
 			this.occupied[ptr] = true;
 			this.fjp.submit(() -> {
 				testGraveYard(ptr);
-				this.counters.get(ptr).count(indices);
+				this.simpleCounters.get(ptr).merge(indices, 1, Integer::sum);
 				this.counts[ptr][1]++;
 				this.occupied[ptr] = false;
 			});
@@ -150,25 +152,24 @@ public class GigaCounter implements Counter {
 
 	private void resolve() {
 		if (this.counter != null) return;
-		while (IntStream.range(0, this.counters.size()).anyMatch(i -> this.occupied[i]));
+		while (IntStream.range(0, this.simpleCounters.size()).anyMatch(i -> this.occupied[i]));
 		
 		if (this.graveyard.size() >= 10) System.out.println("Resolving to VirtualCounter");
 		long t = System.currentTimeMillis();
-		this.counters.forEach(this::pack);
-		this.counters.clear();
+		this.simpleCounters.forEach(this::pack);
+		this.simpleCounters.clear();
 		this.counter = new VirtualCounter(16);
 		unPackAll();
 		if (this.graveyard.size() >= 10) System.out.println("Resolved in " + (System.currentTimeMillis() - t)/1000 + "s");
 		System.gc();
 	}
 
-	private void pack(TrivialCounter c) {
+	private void pack(Map<List<Integer>, Integer> c) {
 		try {
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
 			ObjectOutputStream out = new ObjectOutputStream(baos);
-			out.writeInt(c.getCount());
-			out.writeInt(c.getCounts().size());
-			c.getCounts().entrySet().stream()
+			out.writeInt(c.size());
+			c.entrySet().stream()
 				.sorted((e1, e2) -> compareLists(e1.getKey(), e2.getKey()))
 				.forEach(e -> {
 					List<Integer> key = e.getKey();
@@ -196,8 +197,6 @@ public class GigaCounter implements Counter {
 					try {
 						ByteArrayInputStream baos = new ByteArrayInputStream(this.graveyard.get(j));
 						ObjectInputStream in = new ObjectInputStream(baos);
-						int count = in.readInt();
-						this.counter.updateCount(count);
 						int size = in.readInt();
 						for (int q = 0; q < size; q++) {
 							int len = in.readInt();
@@ -230,15 +229,15 @@ public class GigaCounter implements Counter {
 	private int getNextAvailable() {
 		int ptr = 0;
 		while (this.occupied[ptr]) {
-			ptr = (ptr + 1) % this.counters.size();
+			ptr = (ptr + 1) % this.simpleCounters.size();
 		}
 		return ptr;
 	}
 
 	private void testGraveYard(int ptr) {
 		if (this.counts[ptr][0] > FILES_PER_COUNTER || this.counts[ptr][1] > TOKENS_PER_COUNTER) {
-			pack(this.counters.get(ptr));
-			this.counters.set(ptr, new TrivialCounter());
+			pack(this.simpleCounters.get(ptr));
+			this.simpleCounters.set(ptr, new HashMap<>());
 			this.counts[ptr][0] = 0;
 			this.counts[ptr][1] = 0;
 		}

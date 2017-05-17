@@ -51,10 +51,6 @@ public class VirtualCounter implements Counter {
 		return this.counters.get(0).getCount();
 	}
 
-	public void updateCount(int count) {
-		this.counters.get(0).updateCount(count);
-	}
-
 	private long memCC = 0;
 	@Override
 	public long[] getCounts(List<Integer> indices) {
