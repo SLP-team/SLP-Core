@@ -16,11 +16,9 @@ public class WBModel extends NGramModel {
 	}
 	
 	@Override
-	protected Pair<Double, Double> modelWithConfidence(List<Integer> in) {
-		int[] counts = this.counter.getCounts(in);
-		int count = counts[0];
-		int contextCount = counts[1];
-		if (contextCount == 0) return Pair.of(0.0, 0.0);
+	protected Pair<Double, Double> modelWithConfidence(List<Integer> in, long[] counts) {
+		long count = counts[0];
+		long contextCount = counts[1];
 		
 		// Parameters for discount weight
 		int[] distinctContext = this.counter.getDistinctCounts(1, in.subList(0, in.size() - 1));

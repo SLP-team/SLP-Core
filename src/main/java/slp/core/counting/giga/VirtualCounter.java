@@ -55,10 +55,10 @@ public class VirtualCounter implements Counter {
 		this.counters.get(0).updateCount(count);
 	}
 
-	private int memCC = 0;
+	private long memCC = 0;
 	@Override
-	public int[] getCounts(List<Integer> indices) {
-		int[] counts = this.counters.get(getIndex(indices)).getCounts(indices);
+	public long[] getCounts(List<Integer> indices) {
+		long[] counts = this.counters.get(getIndex(indices)).getCounts(indices);
 		if (indices.size() == 1) {
 			if (this.memCC == 0) {
 				this.memCC = IntStream.range(0, this.counters.size()).map(i -> this.counters.get(i).getContextCount()).sum();

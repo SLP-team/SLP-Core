@@ -65,15 +65,15 @@ public abstract class AbstractTrie implements Counter {
 	}
 	
 	@Override
-	public final int[] getCounts(List<Integer> indices) {
-		if (indices.isEmpty()) return new int[] { getCount(), getCount() };
+	public final long[] getCounts(List<Integer> indices) {
+		if (indices.isEmpty()) return new long[] { getCount(), getCount() };
 		return getCounts(indices, 0);
 	}
 
-	private final int[] getCounts(List<Integer> indices, int index) {
+	private final long[] getCounts(List<Integer> indices, int index) {
 		Integer next = indices.get(index);
 		Object succ = this.getSuccessor(next);
-		int[] counts = new int[2];
+		long[] counts = new long[2];
 		boolean nearLast = index == indices.size() - 1;
 		if (nearLast) counts[1] = this.counts[1];
 		if (succ != null) {

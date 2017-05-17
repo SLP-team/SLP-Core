@@ -101,11 +101,11 @@ public class ModelRunner {
 		return predictionCutoff;
 	}
 
-	private static int[] learnCounts = new int[2];
+	private static long[] learnCounts = new long[2];
 	private static long[] learnTime = new long[1];
 
 	public static void learn(Model model, File file) {
-		learnCounts = new int[] { 0, 0 };
+		learnCounts = new long[] { 0, 0 };
 		learnTime = new long[] { -System.currentTimeMillis() };
 		try {
 			Files.walk(file.toPath())
@@ -179,14 +179,14 @@ public class ModelRunner {
 		}
 	}
 
-	private static int[] modelCounts = new int[2];
+	private static long[] modelCounts = new long[2];
 	private static long[] modelTime = new long[1];
 	
 	private static double[] ent = new double[1];
 	private static double[] mrr = new double[1];
 	
 	public static Stream<Pair<File, List<List<Double>>>> model(Model model, File file) {
-		modelCounts = new int[] { 0, 0 };
+		modelCounts = new long[] { 0, 0 };
 		modelTime = new long[] { -System.currentTimeMillis() };
 		ent = new double[] { 0.0 };
 		try {
@@ -258,7 +258,7 @@ public class ModelRunner {
 	}
 
 	public static Stream<Pair<File, List<List<Double>>>> predict(Model model, File file) {
-		modelCounts = new int[] { 0, 0 };
+		modelCounts = new long[] { 0, 0 };
 		modelTime = new long[] { -System.currentTimeMillis() };
 		mrr = new double[]  { 0.0 };
 		try {

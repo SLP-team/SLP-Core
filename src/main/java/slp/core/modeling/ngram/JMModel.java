@@ -24,11 +24,9 @@ public class JMModel extends NGramModel {
 	}
 
 	@Override
-	protected Pair<Double, Double> modelWithConfidence(List<Integer> in) {
-		int[] counts = this.counter.getCounts(in);
-		int count = counts[0];
-		int contextCount = counts[1];
-		if (contextCount == 0) return Pair.of(0.0, 0.0);
+	protected Pair<Double, Double> modelWithConfidence(List<Integer> in, long[] counts) {
+		long count = counts[0];
+		long contextCount = counts[1];
 		
 		// Probability calculation
 		double MLE = count / (double) contextCount;

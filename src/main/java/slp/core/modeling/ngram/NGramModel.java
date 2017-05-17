@@ -65,8 +65,10 @@ public abstract class NGramModel extends AbstractModel {
 		double mass = 0.0;
 		int hits = 0;
 		for (int i = sequence.size() - 1; i >= 0; i--) {
-			Pair<Double, Double> resN = this.modelWithConfidence(sequence.subList(i, sequence.size()));
-			if (resN.right == 0) break;
+			List<Integer> sub = sequence.subList(i, sequence.size());
+			long[] counts = this.counter.getCounts(sub);
+			if (counts[1] == 0) break;
+			Pair<Double, Double> resN = this.modelWithConfidence(sub, counts);
 			double prob = resN.left;
 			double conf = resN.right;
 			mass = (1 - conf)*mass + conf;
@@ -79,6 +81,8 @@ public abstract class NGramModel extends AbstractModel {
 		return Pair.of(probability, confidence);
 	}
 
+	protected abstract Pair<Double, Double> modelWithConfidence(List<Integer> subList, long[] counts);
+
 	@Override
 	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
@@ -89,15 +93,6 @@ public abstract class NGramModel extends AbstractModel {
 		}
 		return predictions.stream().collect(Collectors.toMap(p -> p, p -> prob(input, index, p)));
 	}
-	
-	private Pair<Double, Double> prob(List<Integer> input, int index, int prediction) {
-		Integer prev = input.set(index, prediction);
-		Pair<Double, Double> prob = this.modelToken(input, index);
-		input.set(index, prev);
-		return prob;
-	}
-
-	protected abstract Pair<Double, Double> modelWithConfidence(List<Integer> subList);
 	
 	private Map<List<Integer>, Pair<Integer, List<Integer>>> mem = new HashMap<>();
 	protected final Collection<Integer> predictWithConfidence(List<Integer> indices, int limit, Set<Integer> covered) {
@@ -114,6 +109,13 @@ public abstract class NGramModel extends AbstractModel {
 			}
 		}
 		return top;
+	}
+
+	private Pair<Double, Double> prob(List<Integer> input, int index, int prediction) {
+		Integer prev = input.set(index, prediction);
+		Pair<Double, Double> prob = this.modelToken(input, index);
+		input.set(index, prev);
+		return prob;
 	}
 
 	private static Class<? extends NGramModel> standard = JMModel.class;

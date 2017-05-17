@@ -73,7 +73,7 @@ public class GigaCounter implements Counter {
 	}
 
 	@Override
-	public int[] getCounts(List<Integer> indices) {
+	public long[] getCounts(List<Integer> indices) {
 		resolve();
 		return this.counter.getCounts(indices);
 	}

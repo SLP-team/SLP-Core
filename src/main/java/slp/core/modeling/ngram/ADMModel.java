@@ -16,11 +16,9 @@ public class ADMModel extends NGramModel {
 	}
 	
 	@Override
-	protected Pair<Double, Double> modelWithConfidence(List<Integer> in) {
-		int[] counts = this.counter.getCounts(in);
-		int count = counts[0];
-		int contextCount = counts[1];
-		if (contextCount == 0) return Pair.of(0.0, 0.0);
+	protected Pair<Double, Double> modelWithConfidence(List<Integer> in, long[] counts) {
+		long count = counts[0];
+		long contextCount = counts[1];
 		
 		// Parameters for discount weight
 		int n1 = this.counter.getCountofCount(in.size(), 1);
@@ -40,7 +38,7 @@ public class ADMModel extends NGramModel {
 		int[] Ns = this.counter.getDistinctCounts(3, in.subList(0, in.size() - 1));
 		
 		// Probability calculation
-		double discount = count > 0 ? Ds[Math.min(count, Ds.length) - 1] : 0.0;
+		double discount = count > 0 ? Ds[(int) (Math.min(count, Ds.length) - 1)] : 0.0;
 		double MLEDisc = Math.max(0.0, count - discount) / contextCount;
 		double lambda = 1 - (Ds[0] * Ns[0] + Ds[1] * Ns[1] + Ds[2] * Ns[2]) / contextCount;
 		// Must divide MLE by lambda to match contract

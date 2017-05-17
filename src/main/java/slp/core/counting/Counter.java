@@ -30,7 +30,7 @@ public interface Counter extends Externalizable {
 	 * @param indices Sequence of stored, translated tokens to return counts for
 	 * @return The stored [context-count, count] pair of indices
 	 */
-	public int[] getCounts(List<Integer> indices);
+	public long[] getCounts(List<Integer> indices);
 
 	/**
 	 * Returns the number of sequences of length n seen `count' times
