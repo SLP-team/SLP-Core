@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
@@ -76,6 +77,8 @@ public class CLI {
 	private static String[] arguments;
 	private static String mode;
 	
+	private static FileWriter logger;
+	
 	public static void main(String[] args) {
 		arguments = args;
 		if (arguments.length == 0 || isSet(HELP)) {
@@ -86,7 +89,7 @@ public class CLI {
 		setupLexerRunner();
 		setupVocabulary();
 		setupModelRunner();
-
+		setupLogger();
 		mode = arguments[0];
 		switch (mode.toLowerCase()) {
 			case "lex": {
@@ -117,6 +120,7 @@ public class CLI {
 				System.out.println("Command " + mode + " not recognized; use -h for help.");
 			}
 		}
+		teardownLogger();
 	}
 
 	private static void printHelp() {
@@ -200,6 +204,25 @@ public class CLI {
 		if (isSet(PER_LINE)) ModelRunner.perLine(true);
 		if (isSelf()) ModelRunner.selfTesting(true);
 		if (isSet(ORDER)) ModelRunner.setNGramOrder(Integer.parseInt(getArg(ORDER)));
+	}
+
+	private static void setupLogger() {
+		if (isSet(VERBOSE)) {
+			try {
+				logger = new FileWriter(getArg(VERBOSE));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private static void teardownLogger() {
+		if (logger != null) {
+			try {
+				logger.close();
+			} catch (IOException e) {
+			}
+		}
 	}
 
 	private static Lexer getLexer() {
@@ -349,9 +372,8 @@ public class CLI {
 			}
 			else {
 				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
-				write(fileProbs);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> write(f)).peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -380,9 +402,8 @@ public class CLI {
 			else ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(model, testDir);
-			write(fileProbs);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> write(f)).peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -403,9 +424,8 @@ public class CLI {
 			}
 			else {
 				Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(getModel(), inDir);
-				write(fileMRRs);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> write(f)).peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -434,9 +454,8 @@ public class CLI {
 			else ModelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
 			Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(model, testDir);
-			write(fileMRRs);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> write(f)).peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -477,26 +496,24 @@ public class CLI {
 		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
 	}
 
-	private static void write(Stream<Pair<File, List<List<Double>>>> fileProbs) {
-		String out = getArg(VERBOSE);
-		if (out != null) {
-			try (FileWriter fw = new FileWriter(new File(out))) {
-				fileProbs.peek(p -> {
-					try {
-						fw.append(p.left.getAbsolutePath());
-						for (List<Double> line : p.right) {
-							for (int i = 0; i < line.size(); i++) {
-								fw.append(String.format("%.6f", line.get(i)));
-								if (i < line.size() - 1) fw.append('\t');
-								else fw.append('\n');
-							}
-						}
-					} catch (IOException e) {
+	private static Pair<File, List<List<Double>>> write(Pair<File, List<List<Double>>> p) {
+		if (logger != null) {
+			try {
+				List<List<String>> tokens = LexerRunner.lex(p.left).map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
+				logger.append(p.left.getAbsolutePath());
+				logger.append('\n');
+				List<List<Double>> right = p.right;
+				for (int i = 0; i < right.size(); i++) {
+					List<Double> line = right.get(i);
+					for (int j = 0; j < line.size(); j++) {
+						logger.append(String.format("%s" + (char) 31 + "%.6f", tokens.get(i).get(j), line.get(j)));
+						if (j < line.size() - 1) logger.append('\t');
 					}
-				});
+					logger.append('\n');
+				}
 			} catch (IOException e) {
-				e.printStackTrace();
 			}
 		}
+		return p;
 	}
 }

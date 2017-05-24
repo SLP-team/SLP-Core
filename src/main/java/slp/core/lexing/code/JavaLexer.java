@@ -30,7 +30,7 @@ public class JavaLexer implements Lexer {
 		List<String> tokens = new ArrayList<>();
 		lineTokens.add(new ArrayList<>());
 		int nextToken = 0;
-		int line = 0;
+		int line = 1;
 		while (true) {
 			try {
 				nextToken = scanner.getNextToken();
