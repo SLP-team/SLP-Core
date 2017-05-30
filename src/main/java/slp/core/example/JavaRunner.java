@@ -32,7 +32,8 @@ public class JavaRunner {
 		LexerRunner.perLine(false);
 		//   c. But, do add sentence markers (to start and end of file)
 		LexerRunner.addSentenceMarkers(true);
-		
+		//   d. Only lex (and thus implicitly, model) files ending with "java". See also 'useRegex'
+		LexerRunner.useExtension("java");
 		
 		// 2. Vocabulary
 		//    a. Do not cut-off any counts (default)
