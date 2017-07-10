@@ -1,9 +1,9 @@
 # Software is Language Too!
-We present the Software Language Processing (SLP) library + CLI, here to enable fluent modeling of evolving text! Check out our [wiki](https://github.com/SLP-team/SLP_Core/wiki) for why we built this, how it works and a detailed getting started guide. Also keep an eye out on sibling projects in the SLP-team ecosystem!
+We present the Software Language Processing (SLP) library + CLI, here to enable fluent modeling of evolving text! Check out our [wiki](https://github.com/SLP-team/SLP_Core/wiki) for why we built this, how it works and a detailed getting started guide. Also keep an eye out on upcoming sibling projects in the SLP-team ecosystem!  
 Note: this tool was created as part of a publication at FSE'2017<sup>1</sup> and has since evolved to version 0.2
 
-# Getting Started
-This core module contains everything needed to get started with modeling language, including code to lex files, build vocabularies, construct (complex) models and run those models. Get the latest Jar and use it either as a [command-line tool](#cli) or add it as a dependency to your project ([code API](#codeapi)) to get started. Other modules relying on Core for more exotic applications are forthcoming.
+# Quick Start
+This core module contains everything needed to get started with modeling language, including code to lex files, build vocabularies, construct (complex) models and run those models. Get the latest Jar and use it either as a [command-line tool](#cli) or add it as a dependency to your project ([code API](#codeapi)) to get started. Other modules relying on SLP-Core for more exotic applications are forthcoming.
 
 ## Code API
 <a name="codeapi"></a>
@@ -16,7 +16,7 @@ The code is best used as a Java library, and well-documented examples of how to 
 `java -jar SLP-Core_v0.2.jar train-test --train train-path --test test-path -m jm -o 6 -l java --cache`  
 
 A break-down of what happened:
-- `train-test`: the 'mode' in which it ran: train and test in one go. You can also train first, store the model (and vocabulary) and then load it later using the separate `train` and `test` modes. Keep in mind that a saved model is useless without its vocabulary! You can either build it separately (using `vocabulary` mode), or let `train` mode save it for you after training
+- `train-test`: the 'mode' in which it ran: train and test in one go.
 - `--train`/`--test`: the paths (files, directories) to recursively train on
 - `-m` (or `--model`): the n-gram model type to use. Use `adm` for a better natural language model, `jm` is standard (and fastest) for code
 - `-o` (or `--order`): the maximum length of sequences to learn. The model complexity increases sharply with this number, and is normally no more than 5, but our tool can handle values up to about 10 on corpora of several millions of tokens, provided your RAM can too. 6 is a good pick for Java code in our experience; performance might decrease for higher values.
@@ -25,9 +25,11 @@ A break-down of what happened:
 
 ### More options
 For other options, type `java -jar SLP-Core_v0.2.jar --help`. See our [wiki](https://github.com/SLP-team/SLP-Core/wiki/Usage:-command-line-API) for some examples of what sequence of commands might be applicable for a typical NLP and SLP use-case with more details. A quick overview of what else can be done:
-- The `-e` (or `--extension`) flag lets you specify the regex extension (e.g.: 'java', 'c(pp)?') to match files against in your train/test directories. Only files matching this extension will be modeled
-- `--verbose *file*` writes all tokens with their entropies for each file to an output file, with tab-separated tokens, each prefixed by their entropy followed by a special separator (ascii 31)
-- There is also a (`train-`)`predict` mode, which asks each model for top 10 completions at every modeling point instead of entropy; every model sub-class must support predict API calls. Of course, batch-prediction doesn't really make sense for practical purposes, but in the future (and in your code) this API can be used for code completion tasks. Batch prediciton evaluation is a slower process, but all the parts are built-in to the tool. The resulting scores are then MRR scores, which reflect prediction accuracy (closer to 1 is better).
+- **Build your vocabulary first**, with the `vocabulary` mode. Write it to file and make sure to load it with the `--vocabulary *file*` flag when training/testing.
+- **Build your model first** with the separate `train` and `test` modes for faster re-use. You can load it back in using the `--counter *file*` flag when testing. Keep in mind that a saved model is useless without its vocabulary! You can either build it separately as above, or let `train` mode save it for you when it saves its own model, by setting the `--vocabulary` flag to where you want it saved when running `train`.
+- The `-e` (or `--extension`) flag lets you specify the (regex) **file extensions to model** (e.g.: 'java', 'c(pp)?') to match files against in your train/test directories. Only files matching this extension will be modeled
+- `--verbose *file*` **writes tokens with their entropies** for each file to an output file, with tab-separated tokens, each prefixed by their entropy followed by a special separator (ascii 31)
+- There is also a (`train-`)`predict` mode, which asks each model for **top 10 completions** at every modeling point instead of entropy. Every Model must support predict API calls. Of course, batch-prediction itself doesn't really make sense for practical purposes but is a useful evaluation metric, and this API can in the future (and in your code) be used for code completion tasks. Prediciton evaluation is a slower process, but all the parts are built into the tool. The resulting scores are then MRR scores, which reflect prediction accuracy (closer to 1 is better).
 
 <a name="release"></a>
 # Release Notes
