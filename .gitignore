@@ -4,6 +4,9 @@
 *.class
 *.log
 
+# As of v0.2
+./*.jar
+
 # eclipse specific git ignore
 *.pydevproject
 .metadata
