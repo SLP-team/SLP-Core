@@ -163,7 +163,7 @@ public class CLI {
 				+ "\n\t\tIf none given, vocabulary is constructed 'on the fly' while modeling.");
 		System.out.println("\t--closed: close vocabulary after reading, treating every further token as unknown."
 				+ "\n\t\tNot generally recommended for source code, but sometimes applicable."
-				+ "\n\t\tHas no effect if vocabulary is build instead of read.");
+				+ "\n\t\tHas no effect if vocabulary is built on-line instead of read from file.");
 		System.out.println("\t-u | --unk-cutoff: set an unknow token cut-off when building/reading in vocabulary."
 				+ "\n\t\tAll tokens seen >= cut-off times are preserved. Default: 0, preserving all tokens.");
 		System.out.println("  Training:");

@@ -156,7 +156,7 @@ public class GigaCounter implements Counter {
 		
 		if (this.graveyard.size() >= 10) System.out.println("Resolving to VirtualCounter");
 		long t = System.currentTimeMillis();
-		this.simpleCounters.forEach(this::pack);
+		this.simpleCounters.stream().filter(c -> !c.isEmpty()).forEach(this::pack);
 		this.simpleCounters.clear();
 		this.counter = new VirtualCounter(16);
 		unPackAll();

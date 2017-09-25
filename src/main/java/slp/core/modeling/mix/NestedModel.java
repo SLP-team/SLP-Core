@@ -49,7 +49,7 @@ public class NestedModel extends AbstractModel {
 	}
 
 	private Model fromGlobal() {
-		return fromGlobal(false);
+		return fromGlobal(true);
 	}
 
 	private Model fromGlobal(boolean copyCounter) {

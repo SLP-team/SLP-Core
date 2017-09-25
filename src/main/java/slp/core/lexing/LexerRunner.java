@@ -132,15 +132,13 @@ public class LexerRunner {
 					String path = to.getAbsolutePath() + fIn.getAbsolutePath().substring(from.getAbsolutePath().length());
 					File fOut = new File(path);
 					File outDir = fOut.getParentFile();
-					if (!fOut.exists()) {
-						outDir.mkdirs();
-						try {
-							Stream<Stream<String>> lexed = lex(fIn);
-							Writer.writeTokenized(fOut, lexed);
-						} catch (IOException e) {
-							System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);
-							e.printStackTrace();
-						}
+					outDir.mkdirs();
+					try {
+						Stream<Stream<String>> lexed = lex(fIn);
+						Writer.writeTokenized(fOut, lexed);
+					} catch (IOException e) {
+						System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);
+						e.printStackTrace();
 					}
 				});
 		} catch (IOException e1) {
