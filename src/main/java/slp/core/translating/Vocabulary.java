@@ -103,10 +103,6 @@ public class Vocabulary {
 		return index;
 	}
 
-	public static Stream<String> findWords(Stream<Integer> indices) {
-		return indices.map(Vocabulary::toWord);
-	}
-	
 	public static Stream<String> toWords(Stream<Integer> indices) {
 		return indices.map(Vocabulary::toWord);
 	}
