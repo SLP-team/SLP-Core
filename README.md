@@ -3,11 +3,11 @@ We present the Software Language Processing (SLP) library + CLI, here to enable 
 Note: this tool was created as part of a publication at FSE'2017<sup>1</sup> and has since evolved to version 0.2
 
 # Quick Start
-This core module contains everything needed to get started with modeling language, including code to lex files, build vocabularies, construct (complex) models and run those models. Get the latest Jar and use it either as a [command-line tool](#cli) or add it as a dependency to your project ([code API](#codeapi)) to get started. Other modules relying on SLP-Core for more exotic applications are forthcoming. Finally: any questions/ideas? Create an Issue! Any improvements/bug fixes? Submit a Pull Request! We greatly appreciate your help in making this useful for others.
+This core module contains everything needed to get started with modeling language, including code to lex files, build vocabularies, construct (complex) models and run those models. Get the [latest Jar](https://github.com/SLP-team/SLP-Core/releases) and use it either as a [command-line tool](#cli) or add it as a dependency to your project ([code API](#codeapi)) to get started. Other modules relying on SLP-Core for more exotic applications are forthcoming. Finally: any questions/ideas? Create an Issue! Any improvements/bug fixes? Submit a Pull Request! We greatly appreciate your help in making this useful for others.
 
 ## Code API
 <a name="codeapi"></a>
-The code is best used as a Java library, and well-documented examples of how to use this code for both NL and SE use-cases are in src/slp/core/example of this repo. To get started with the code as a library, either add the Jar to your dependencies (Maven dependency coming soon!) or download the whole project and link it to yours. See the [wiki](https://github.com/SLP-team/SLP_Core/wiki) for a more thorough explanation and don't hesitate to ask questions as an Issue!
+The code is best used as a Java library, and well-documented examples of how to use this code for both NL and SE use-cases are in src/slp/core/example of this repo. To get started with the code as a library, either add [the latest Jar](https://github.com/SLP-team/SLP-Core/releases) to your dependencies (Maven dependency coming soon!) or download the whole project and link it to yours. See the [wiki](https://github.com/SLP-team/SLP_Core/wiki) for a more thorough explanation and don't hesitate to ask questions as an Issue!
 
 ## Command Line API
 <a name="cli"></a>
