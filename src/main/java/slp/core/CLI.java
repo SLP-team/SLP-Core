@@ -5,7 +5,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.counting.Counter;
@@ -14,6 +13,7 @@ import slp.core.counting.io.CounterIO;
 import slp.core.counting.trie.AbstractTrie;
 import slp.core.example.JavaRunner;
 import slp.core.example.NLRunner;
+import slp.core.io.Writer;
 import slp.core.lexing.Lexer;
 import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
@@ -77,7 +77,7 @@ public class CLI {
 	private static String[] arguments;
 	private static String mode;
 	
-	private static FileWriter logger;
+	public static FileWriter logger;
 	
 	public static void main(String[] args) {
 		arguments = args;
@@ -373,7 +373,7 @@ public class CLI {
 			else {
 				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> write(f)).peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -403,7 +403,7 @@ public class CLI {
 			Model model = wrapModel(nGramModel);
 			Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(model, testDir);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> write(f)).peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -425,7 +425,7 @@ public class CLI {
 			else {
 				Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(getModel(), inDir);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> write(f)).peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -455,7 +455,7 @@ public class CLI {
 			Model model = wrapModel(nGramModel);
 			Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(model, testDir);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> write(f)).peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -494,26 +494,5 @@ public class CLI {
 	private static boolean isSelf() {
 		// Self testing if SELF has been set, or if TRAIN equal to TEST
 		return isSet(SELF) || (isSet(TRAIN) && isSet(TEST) && getArg(TRAIN).equals(getArg(TEST)));
-	}
-
-	private static Pair<File, List<List<Double>>> write(Pair<File, List<List<Double>>> p) {
-		if (logger != null) {
-			try {
-				List<List<String>> tokens = LexerRunner.lex(p.left).map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
-				logger.append(p.left.getAbsolutePath());
-				logger.append('\n');
-				List<List<Double>> right = p.right;
-				for (int i = 0; i < right.size(); i++) {
-					List<Double> line = right.get(i);
-					for (int j = 0; j < line.size(); j++) {
-						logger.append(String.format("%s" + (char) 31 + "%.6f", tokens.get(i).get(j), line.get(j)));
-						if (j < line.size() - 1) logger.append('\t');
-					}
-					logger.append('\n');
-				}
-			} catch (IOException e) {
-			}
-		}
-		return p;
 	}
 }

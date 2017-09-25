@@ -10,6 +10,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import slp.core.CLI;
+import slp.core.lexing.LexerRunner;
+import slp.core.util.Pair;
+
 public class Writer {
 
 	public static void writeContent(File file, String content) throws IOException {
@@ -59,5 +63,27 @@ public class Writer {
 				}
 			});
 		}
+	}
+
+	// writes tokens and their entropies to a file
+	public static Pair<File, List<List<Double>>> writeEntropies(Pair<File, List<List<Double>>> p) {
+		if (CLI.logger != null) {
+			try {
+				List<List<String>> tokens = LexerRunner.lex(p.left).map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
+				CLI.logger.append(p.left.getAbsolutePath());
+				CLI.logger.append('\n');
+				List<List<Double>> right = p.right;
+				for (int i = 0; i < right.size(); i++) {
+					List<Double> line = right.get(i);
+					for (int j = 0; j < line.size(); j++) {
+						CLI.logger.append(String.format("%s" + (char) 31 + "%.6f", tokens.get(i).get(j), line.get(j)));
+						if (j < line.size() - 1) CLI.logger.append('\t');
+					}
+					CLI.logger.append('\n');
+				}
+			} catch (IOException e) {
+			}
+		}
+		return p;
 	}
 }
