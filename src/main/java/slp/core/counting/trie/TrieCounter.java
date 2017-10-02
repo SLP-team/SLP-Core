@@ -28,7 +28,7 @@ public class TrieCounter extends AbstractTrie {
 	}
 	
 	@Override
-	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
+	public List<Integer> getTopSuccessorsInternal(int limit) {
 		return IntStream.range(0, this.indices.length)
 			.filter(i -> this.indices[i] != Integer.MAX_VALUE)
 			.mapToObj(i -> Pair.of(this.indices[i], this.getCount(this.successors[i])))

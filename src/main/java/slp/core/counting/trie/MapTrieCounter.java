@@ -31,7 +31,7 @@ public class MapTrieCounter extends AbstractTrie {
 	}
 	
 	@Override
-	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
+	public List<Integer> getTopSuccessorsInternal(int limit) {
 		return this.map.int2ObjectEntrySet().stream()
 			.map(e -> Pair.of(e.getIntKey(), getCount(e.getValue())))
 			.sorted((p1, p2) -> -Integer.compare(p1.right, p2.right))

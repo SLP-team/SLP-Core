@@ -2,7 +2,6 @@ package slp.core.modeling.ngram;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -85,7 +84,7 @@ public abstract class NGramModel extends AbstractModel {
 
 	@Override
 	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
+		List<Integer> sequence = NGramSequencer.sequenceAt(input, index - 1);
 		Set<Integer> predictions = new HashSet<>();
 		int limit = ModelRunner.getPredictionCutoff();
 		for (int i = 0; i < sequence.size(); i++) {
@@ -95,7 +94,7 @@ public abstract class NGramModel extends AbstractModel {
 	}
 	
 	private Map<List<Integer>, Pair<Integer, List<Integer>>> mem = new HashMap<>();
-	protected final Collection<Integer> predictWithConfidence(List<Integer> indices, int limit, Set<Integer> covered) {
+	protected final List<Integer> predictWithConfidence(List<Integer> indices, int limit, Set<Integer> covered) {
 		List<Integer> top;
 		int key = 31*(counter.getSuccessorCount() + 31*counter.getCount());
 		if (this.mem.containsKey(indices) && this.mem.get(indices).left.equals(key)) {

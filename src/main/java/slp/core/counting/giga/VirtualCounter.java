@@ -54,7 +54,7 @@ public class VirtualCounter implements Counter {
 	private long memCC = 0;
 	@Override
 	public long[] getCounts(List<Integer> indices) {
-		long[] counts = this.counters.get(getIndex(indices)).getCounts(indices);
+		long[] counts = getCounter(indices).getCounts(indices);
 		if (indices.size() == 1) {
 			if (this.memCC == 0) {
 				this.memCC = IntStream.range(0, this.counters.size()).map(i -> this.counters.get(i).getContextCount()).sum();
@@ -79,18 +79,15 @@ public class VirtualCounter implements Counter {
 
 	@Override
 	public int getSuccessorCount(List<Integer> indices) {
-		return this.counters.get(getIndex(indices)).getSuccessorCount(indices);
+		return getCounter(indices).getSuccessorCount(indices);
 	}
 
 	@Override
 	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
-		if (!indices.isEmpty()) return this.counters.get(getIndex(indices)).getTopSuccessors(indices, limit);
-		else {
-			// TODO
-			return null;
-		}
+		if (!indices.isEmpty()) return getCounter(indices).getTopSuccessors(indices, limit);
+		else return getCounter(indices).getTopSuccessors(indices, limit);
 	}
-	
+
 	private int[] memDS = null;
 	@Override
 	public int[] getDistinctCounts(int range, List<Integer> indices) {
@@ -102,7 +99,7 @@ public class VirtualCounter implements Counter {
 			}
 			return this.memDS;
 		}
-		else return this.counters.get(getIndex(indices)).getDistinctCounts(range, indices);
+		else return getCounter(indices).getDistinctCounts(range, indices);
 	}
 
 	@Override
@@ -110,14 +107,14 @@ public class VirtualCounter implements Counter {
 		this.memCC = 0;
 		this.memSC = 0;
 		this.memDS = null;
-		this.counters.get(getIndex(indices)).count(indices);
+		getCounter(indices).count(indices);
 	}
 
 	public void count(List<Integer> indices, int frequency) {
 		this.memCC = 0;
 		this.memSC = 0;
 		this.memDS = null;
-		this.counters.get(getIndex(indices)).update(indices, frequency);
+		getCounter(indices).update(indices, frequency);
 	}
 
 	@Override
@@ -125,7 +122,11 @@ public class VirtualCounter implements Counter {
 		this.memCC = 0;
 		this.memSC = 0;
 		this.memDS = null;
-		this.counters.get(getIndex(indices)).unCount(indices);
+		getCounter(indices).unCount(indices);
+	}
+
+	private MapTrieCounter getCounter(List<Integer> indices) {
+		return this.counters.get(getIndex(indices));
 	}
 
 	private int getIndex(List<Integer> key) {

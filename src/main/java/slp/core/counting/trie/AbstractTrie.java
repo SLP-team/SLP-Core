@@ -3,6 +3,7 @@ package slp.core.counting.trie;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -22,11 +23,6 @@ public abstract class AbstractTrie implements Counter {
 		this.counts = new int[2 + COUNT_OF_COUNTS_CUTOFF];
 	}
 	
-	/*
-	 * Abstract members to be implemented
-	 */
-	public abstract List<Integer> getTopSuccessors(List<Integer> indices, int limit);
-	
 	/**
 	 * Return a new AbstractTrie instance of your choosing.
 	 * For instance, {@link MapTrieCounter} at present returns a map for the root and second level, than a regular Trie,
@@ -38,6 +34,8 @@ public abstract class AbstractTrie implements Counter {
 	abstract void removeSuccessor(int key);
 	abstract Object getSuccessor(int key);
 	
+	abstract List<Integer> getTopSuccessorsInternal(int limit);
+
 	public abstract void readExternal(ObjectInput in) throws IOException, ClassNotFoundException;
 	public abstract void writeExternal(ObjectOutput out) throws IOException;
 
@@ -164,6 +162,21 @@ public abstract class AbstractTrie implements Counter {
 				trueSucc[i] = successor[i + indices.size() - index - 1];
 			}
 			return trueSucc;
+		}
+	}
+
+	/*
+	 * Abstract members to be implemented
+	 */
+	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
+		Object successor = getSuccessorNode(indices, 0);
+		if (successor == null) return new ArrayList<>();
+		else if (successor instanceof AbstractTrie) return ((AbstractTrie) successor).getTopSuccessorsInternal(limit);
+		else {
+			int[] succ = (int[]) successor;
+			List<Integer> successors = new ArrayList<>();
+			if (succ.length > 1) successors.add(succ[1]);
+			return successors;
 		}
 	}
 

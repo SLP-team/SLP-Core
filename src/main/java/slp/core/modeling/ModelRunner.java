@@ -25,7 +25,7 @@ import slp.core.util.Pair;
  */
 public class ModelRunner {
 	
-	private static final double NEG_LOG_2 = -Math.log(2);
+	private static final double INV_NEG_LOG_2 = -1.0/Math.log(2);
 	private static boolean perLine = false;
 	private static boolean selfTesting = false;
 	
@@ -340,7 +340,7 @@ public class ModelRunner {
 	}
 	
 	public static double toEntropy(double probability) {
-		return Math.log(probability)/NEG_LOG_2;
+		return Math.log(probability) * INV_NEG_LOG_2;
 	}
 	
 	public static List<List<Integer>> toPredictions(List<Map<Integer, Pair<Double, Double>>> probConfs) {

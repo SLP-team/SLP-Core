@@ -433,7 +433,7 @@ public class CLI {
 		else {
 			System.err.println("Not enough arguments given."
 					+ "Predicting requires two positional arguments: test path and counter file.");
-		}		
+		}
 	}
 
 	private static void trainPredict() {
