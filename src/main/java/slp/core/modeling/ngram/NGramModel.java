@@ -112,7 +112,7 @@ public abstract class NGramModel extends AbstractModel {
 
 	private Pair<Double, Double> prob(List<Integer> input, int index, int prediction) {
 		Integer prev = input.set(index, prediction);
-		Pair<Double, Double> prob = this.modelToken(input, index);
+		Pair<Double, Double> prob = this.modelAtIndex(input, index);
 		input.set(index, prev);
 		return prob;
 	}
