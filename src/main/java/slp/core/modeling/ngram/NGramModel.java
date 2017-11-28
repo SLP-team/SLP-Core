@@ -14,6 +14,7 @@ import slp.core.counting.trie.TrieCounter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
+import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
 
 public abstract class NGramModel extends AbstractModel {
@@ -42,8 +43,20 @@ public abstract class NGramModel extends AbstractModel {
 	
 	@Override
 	public void learnToken(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		for (int i = 0; i < sequence.size(); i++) this.counter.count(sequence.subList(i, sequence.size()));
+		/*
+		 * Learning/forgetting a token in the middle of a sequence is not straightforward.
+		 * We do so by extracting every ngram that the word at index will be part of
+		 * and learning/forgetting each, while forgetting/learning the context only
+		 * up to but not including the word's position again (due to aggressive sequence counting)
+		 */
+		List<List<Integer>> sequences = NGramSequencer.sequenceAround(input, index);
+		int posInSequence = Math.min(index, ModelRunner.getNGramOrder() - 1);
+		for (int i = 0; i < sequences.size(); i++) {
+			List<Integer> sequence = sequences.get(i);
+			// We must forget context up to the word to prevent double-counting with aggressive sequence counting.
+			this.counter.count(sequence);
+			if (posInSequence >= 0) this.counter.unCount(sequence.subList(0, posInSequence--));
+		}
 	}
 	
 	@Override
@@ -53,8 +66,20 @@ public abstract class NGramModel extends AbstractModel {
 	
 	@Override
 	public void forgetToken(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		for (int i = 0; i < sequence.size(); i++) this.counter.unCount(sequence.subList(i, sequence.size()));
+		/*
+		 * Learning/forgetting a token in the middle of a sequence is not straightforward.
+		 * We do so by extracting every ngram that the word at index will be part of
+		 * and learning/forgetting each, while forgetting/learning the corresponding context
+		 * up to but not including the word again (due to aggressive sequence counting)
+		 */
+		List<List<Integer>> sequences = NGramSequencer.sequenceAround(input, index);
+		int posInSequence = Math.min(index, ModelRunner.getNGramOrder() - 1);
+		for (int i = 0; i < sequences.size(); i++) {
+			List<Integer> sequence = sequences.get(i);
+			// We must learn context up to the word to prevent double-counting with aggressive sequence counting.
+			if (posInSequence >= 0) this.counter.count(sequence.subList(0, posInSequence--));
+			this.counter.unCount(sequence);
+		}
 	}
 
 	@Override
@@ -96,7 +121,7 @@ public abstract class NGramModel extends AbstractModel {
 	private Map<List<Integer>, Pair<Integer, List<Integer>>> mem = new HashMap<>();
 	protected final List<Integer> predictWithConfidence(List<Integer> indices, int limit, Set<Integer> covered) {
 		List<Integer> top;
-		int key = 31*(counter.getSuccessorCount() + 31*counter.getCount());
+		int key = 31*(this.counter.getSuccessorCount() + 31*this.counter.getCount());
 		if (this.mem.containsKey(indices) && this.mem.get(indices).left.equals(key)) {
 			top = this.mem.get(indices).right;
 		}
@@ -112,7 +137,7 @@ public abstract class NGramModel extends AbstractModel {
 
 	private Pair<Double, Double> prob(List<Integer> input, int index, int prediction) {
 		Integer prev = input.set(index, prediction);
-		Pair<Double, Double> prob = this.modelToken(input, index);
+		Pair<Double, Double> prob = this.modelAtIndex(input, index);
 		input.set(index, prev);
 		return prob;
 	}

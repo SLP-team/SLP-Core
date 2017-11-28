@@ -232,8 +232,7 @@ public abstract class AbstractTrie implements Counter {
 		boolean valid = ArrayStorage.checkExactSequence(indices, index, successor);
 		if (valid) updateArrayCount(indices, index, adj, successor);
 		else {
-			if (adj < 0) System.err.println("Attempting to unsee never seen event");
-			Counter newNext = promoteArrayToTrie(indices, index, successor);
+			AbstractTrie newNext = promoteArrayToTrie(indices, index, successor);
 			updateTrie(indices, index, adj, newNext);
 		}
 	}
@@ -249,7 +248,7 @@ public abstract class AbstractTrie implements Counter {
 		}
 	}
 
-	Counter promoteArrayToTrie(List<Integer> indices, int index, int[] successor) {
+	private AbstractTrie promoteArrayToTrie(List<Integer> indices, int index, int[] successor) {
 		AbstractTrie newNext = makeNext(index);
 		newNext.updateCount(successor[0]);
 		if (successor.length > 1) {
