@@ -45,7 +45,6 @@ public class JavaRunner {
 		//       - Building first yields the same result, but could e.g. allow one to write the vocabulary before training.
 		VocabularyRunner.build(train);
 		
-		
 		// 3. Model
 		//    a. No per line modeling for Java (default)
 		ModelRunner.perLine(false);

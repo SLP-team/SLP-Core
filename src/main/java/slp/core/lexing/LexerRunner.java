@@ -39,7 +39,7 @@ public class LexerRunner {
 	 * Returns the lexer currently used by this class
 	 */
 	public static Lexer getLexer() {
-		return LexerRunner.lexer;
+		return lexer;
 	}
 
 	/**
