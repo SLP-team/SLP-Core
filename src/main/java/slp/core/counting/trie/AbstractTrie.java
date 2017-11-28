@@ -7,9 +7,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import slp.core.counting.Counter;
 import slp.core.modeling.ModelRunner;
+import slp.core.translating.Vocabulary;
 
 public abstract class AbstractTrie implements Counter {
 
@@ -266,7 +268,9 @@ public abstract class AbstractTrie implements Counter {
 
 	private void addArray(List<Integer> indices, int index, int adj) {
 		if (adj < 0) {
-			System.out.println("Attempting to store new event with negative count: " + indices.subList(index, indices.size()));
+			System.out.println("Attempting to forget unknown event: "
+					+ indices.subList(index, indices.size()) + " == "
+					+ indices.subList(index, indices.size()).stream().map(Vocabulary::toWord).collect(Collectors.toList()));
 			return;
 		}
 		int[] singleton = new int[indices.size() - index];
