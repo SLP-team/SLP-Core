@@ -55,11 +55,12 @@ public class NestedModel extends AbstractModel {
 	private Model fromGlobal(boolean copyCounter) {
 		try {
 			if (copyCounter && this.global instanceof NGramModel) {
-				Class<? extends Counter> counter = ((NGramModel) this.global).getCounter().getClass();
-				return this.global.getClass().getConstructor(Counter.class).newInstance(counter.newInstance());
+				Counter oldCounter = ((NGramModel) this.global).getCounter();
+				Counter newCounter = oldCounter.getClass().getDeclaredConstructor().newInstance();
+				return this.global.getClass().getConstructor(Counter.class).newInstance(newCounter);
 			}
 			else {
-				return this.global.getClass().newInstance();
+				return this.global.getClass().getDeclaredConstructor().newInstance();
 			}
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
 				| InvocationTargetException | NoSuchMethodException | SecurityException e) {
