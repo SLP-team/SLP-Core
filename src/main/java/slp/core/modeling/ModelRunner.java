@@ -134,7 +134,7 @@ public class ModelRunner {
 				.map(l -> l.peek(l2 -> {
 					if (++learnStats[0] % 1000000 == 0) {
 						System.out.printf("Counting: %dK tokens processed in %ds\n",
-								Math.round(learnStats[0]/10e3), (System.currentTimeMillis() + learnStats[1])/1000);
+								Math.round(learnStats[0]/1e3), (System.currentTimeMillis() + learnStats[1])/1000);
 					}
 				}))
 				.map(l -> l.collect(Collectors.toList()))
@@ -144,7 +144,7 @@ public class ModelRunner {
 			model.learn(lexed.map(l -> l.peek(l2 -> {
 					if (++learnStats[0] % 1000000 == 0) {
 						System.out.printf("Counting: %dK tokens processed in %ds\n",
-								Math.round(learnStats[0]/10e3), (System.currentTimeMillis() + learnStats[1])/1000);
+								Math.round(learnStats[0]/1e3), (System.currentTimeMillis() + learnStats[1])/1000);
 					}
 				}))
 				.flatMap(Vocabulary::toIndices)
@@ -242,7 +242,7 @@ public class ModelRunner {
 		}
 		if (modelStats[0] / 100000 > prevCount / 100000) {
 			System.out.printf("Modeling: %dK tokens processed in %ds, avg. entropy: %.4f\n",
-					Math.round(modelStats[0]/10e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+					Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
@@ -313,7 +313,7 @@ public class ModelRunner {
 		}
 		if (modelStats[0] / 100000 > prevCount / 100000) {
 			System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
-					Math.round(modelStats[0]/10e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+					Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
