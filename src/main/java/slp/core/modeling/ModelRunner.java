@@ -101,27 +101,21 @@ public class ModelRunner {
 		return predictionCutoff;
 	}
 
-	private static long[] learnCounts = new long[2];
-	private static long[] learnTime = new long[1];
+	private static long[] learnStats = new long[2];
 
 	public static void learn(Model model, File file) {
-		learnCounts = new long[] { 0, 0 };
-		learnTime = new long[] { -System.currentTimeMillis() };
+		learnStats = new long[] { 0, -System.currentTimeMillis() };
 		try {
 			Files.walk(file.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
-				.peek(f -> {
-					if (++learnCounts[0] % 1000 == 0) {
-						System.out.println("Counting at file " + learnCounts[0] + ", tokens processed: " + learnCounts[1] + " in " + (learnTime[0] + System.currentTimeMillis())/1000 + "s");
-					}
-				})
 				.forEach(f -> learnFile(model, f));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if (learnCounts[0] > 1000 || learnCounts[1] > 1000000) {
-			System.out.println("Counting complete, files: " + learnCounts[0] + ", tokens: " + learnCounts[1] + ", time: " + (learnTime[0] + System.currentTimeMillis())/1000 + "s");
+		if (learnStats[0] > 1000000) {
+			System.out.printf("Counting complete: %d tokens processed in %ds\n",
+					learnStats[0], (System.currentTimeMillis() + learnStats[1])/1000);
 		}
 	}
 	
@@ -137,12 +131,22 @@ public class ModelRunner {
 	public static void learnTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
 			lexed.map(Vocabulary::toIndices)
-				.map(l -> l.peek(l2 -> learnCounts[1]++))
+				.map(l -> l.peek(l2 -> {
+					if (++learnStats[0] % 1000000 == 0) {
+						System.out.printf("Counting: %dK tokens processed in %ds\n",
+								Math.round(learnStats[0]/10e3), (System.currentTimeMillis() + learnStats[1])/1000);
+						}
+				}))
 				.map(l -> l.collect(Collectors.toList()))
 				.forEach(model::learn);
 		}
 		else {
-			model.learn(lexed.map(l -> l.peek(l2 -> learnCounts[1]++))
+			model.learn(lexed.map(l -> l.peek(l2 -> {
+					if (++learnStats[0] % 1000000 == 0) {
+						System.out.printf("Counting: %dK tokens processed in %ds\n",
+								Math.round(learnStats[0]/10e3), (System.currentTimeMillis() + learnStats[1])/1000);
+					}
+				}))
 				.flatMap(Vocabulary::toIndices)
 				.collect(Collectors.toList()));
 		}
@@ -159,15 +163,15 @@ public class ModelRunner {
 		}
 	}
 	
-	public static void forgetLines(Model model, Stream<String> lines) {
-		forgetTokens(model, LexerRunner.lex(lines));
-	}
-	
 	public static void forgetFile(Model model, File f) {
 		model.notify(f);
 		forgetTokens(model, LexerRunner.lex(f));
 	}
 
+	public static void forgetLines(Model model, Stream<String> lines) {
+		forgetTokens(model, LexerRunner.lex(lines));
+	}
+	
 	public static void forgetTokens(Model model, Stream<Stream<String>> lexed) {
 		if (perLine) {
 			lexed.map(Vocabulary::toIndices)
@@ -179,26 +183,18 @@ public class ModelRunner {
 		}
 	}
 
-	private static long[] modelCounts = new long[2];
-	private static long[] modelTime = new long[1];
+	private static long[] modelStats = new long[2];
 	
 	private static double[] ent = new double[1];
 	private static double[] mrr = new double[1];
 	
 	public static Stream<Pair<File, List<List<Double>>>> model(Model model, File file) {
-		modelCounts = new long[] { 0, 0 };
-		modelTime = new long[] { -System.currentTimeMillis() };
+		modelStats = new long[] { 0, -System.currentTimeMillis()  };
 		ent = new double[] { 0.0 };
 		try {
 			return Files.walk(file.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
-				.peek(f -> {
-					if (++modelCounts[0] % 100 == 0) {
-						System.out.printf("Modeling @ file %d (%d tokens, %ds), entropy: %.4f\n",
-								modelCounts[0], modelCounts[1], (System.currentTimeMillis() + modelTime[0])/1000, ent[0]/modelCounts[1]);
-					}
-				})
 				.map(f -> modelFile(model, f));
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -219,6 +215,7 @@ public class ModelRunner {
 	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
+		long prevCount = modelStats[0];
 		if (perLine) {
 			lineProbs = lexed.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
@@ -228,7 +225,7 @@ public class ModelRunner {
 					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
 					.mapToDouble(l -> l).summaryStatistics();
 			ent[0] += stats.getSum();
-			modelCounts[1] += stats.getCount();
+			modelStats[0] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = modelSequence(model, lexed
@@ -240,8 +237,12 @@ public class ModelRunner {
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
 					.mapToDouble(l -> l).summaryStatistics();
 			ent[0] += stats.getSum();
-			modelCounts[1] += stats.getCount();
+			modelStats[0] += stats.getCount();
 			lineProbs = toLines(modeled, lineLengths);
+		}
+		if (modelStats[0] / 100000 > prevCount / 100000) {
+			System.out.printf("Modeling: %dK tokens processed in %ds, avg. entropy: %.4f\n",
+					Math.round(modelStats[0]/10e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
@@ -258,19 +259,12 @@ public class ModelRunner {
 	}
 
 	public static Stream<Pair<File, List<List<Double>>>> predict(Model model, File file) {
-		modelCounts = new long[] { 0, 0 };
-		modelTime = new long[] { -System.currentTimeMillis() };
+		modelStats = new long[] { 0, -System.currentTimeMillis()  };
 		mrr = new double[]  { 0.0 };
 		try {
 			return Files.walk(file.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
-				.peek(f -> {
-					if (++modelCounts[0] % 100 == 0) {
-						System.out.printf("Predicting @ file %d (%d tokens, %ds), mrr: %.4f\n",
-							modelCounts[0], modelCounts[1], (System.currentTimeMillis() + modelTime[0])/1000, mrr[0]/modelCounts[1]);
-					}
-				})
 				.map(f -> predictFile(model, f));
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -291,6 +285,7 @@ public class ModelRunner {
 	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
+		long prevCount = modelStats[0];
 		if (perLine) {
 			lineProbs = lexed
 				.map(Vocabulary::toIndices)
@@ -301,7 +296,7 @@ public class ModelRunner {
 					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
 					.mapToDouble(l -> l).summaryStatistics();
 			mrr[0] += stats.getSum();
-			modelCounts[0] += stats.getCount();
+			modelStats[0] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = predictSequence(model, lexed
@@ -314,7 +309,11 @@ public class ModelRunner {
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
 					.mapToDouble(l -> l).summaryStatistics();
 			mrr[0] += stats.getSum();
-			modelCounts[0] += stats.getCount();
+			modelStats[0] += stats.getCount();
+		}
+		if (modelStats[0] / 100000 > prevCount / 100000) {
+			System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
+					Math.round(modelStats[0]/10e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
