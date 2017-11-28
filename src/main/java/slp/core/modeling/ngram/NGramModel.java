@@ -123,8 +123,9 @@ public abstract class NGramModel extends AbstractModel {
 	}
 	public static NGramModel standard() {
 		try {
-			return standard.newInstance();
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | SecurityException e) {
+			return standard.getDeclaredConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+				| SecurityException | InvocationTargetException | NoSuchMethodException e) {
 			e.printStackTrace();
 			return new JMModel();
 		}
