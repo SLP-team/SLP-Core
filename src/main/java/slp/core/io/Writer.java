@@ -21,6 +21,15 @@ public class Writer {
 			fw.append(content);
 		}
 	}
+
+	public static void writeLines(File file, List<String> lines) throws IOException {
+		try (BufferedWriter fw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
+			for (String line : lines) {
+				fw.append(line);
+				fw.append('\n');
+			}
+		}
+	}
 	
 	public static <T> void writeAny(File file, List<List<T>> lines) throws IOException {
 		writeAny(file, lines.stream().map(List::stream));
