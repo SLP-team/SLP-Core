@@ -16,10 +16,15 @@ import org.eclipse.jdt.core.compiler.InvalidInputException;
 import slp.core.lexing.Lexer;
 
 public class JavaLexer implements Lexer {
-	
+
 	@Override
 	public Stream<Stream<String>> lex(List<String> lines) {
 		String text = lines.stream().collect(Collectors.joining("\n"));
+		return lex(text);
+	}
+	
+	@Override
+	public Stream<Stream<String>> lex(String text) {
 		return tokenizeLines(text).stream().map(List::stream);
 	}
 

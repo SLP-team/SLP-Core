@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
-import slp.core.io.Reader;
 import slp.core.io.Writer;
 import slp.core.lexing.simple.PunctuationLexer;
 import slp.core.translating.Vocabulary;
@@ -147,19 +146,26 @@ public class LexerRunner {
 	}
 
 	/**
-	 * Lex the provided file to a stream of tokens per line.
+	 * Lex the provided file to a stream of tokens per line. Note that this is preferred over lex(lines),
+	 * since knowing the file location/context can be for most lexers!
 	 * <br />
 	 * <em>Note:</em> returns empty stream if the file does not match this builder's regex
 	 * (which accepts everything unless set otherwise in {@link #useRegex(String)}).
 	 * @param file File to lex
 	 */
 	public static Stream<Stream<String>> lex(File file) {
-		if (file.getName().matches(regex)) return lex(Reader.readLines(file));
-		else return Stream.empty();
+		if (!file.getName().matches(regex)) return Stream.empty();
+		Stream<Stream<String>> lexed = lexer.lex(file)
+				.map(l -> l.map(Vocabulary::toIndex))
+				.map(l -> l.map(t -> translate ? t+"" : Vocabulary.toWord(t)));
+		if (sentenceMarkers) return withDelimiters(lexed);
+		else return lexed;
 	}
 	
 	/**
-	 * Lex the provided lines (see {@link slp.core.io.Reader}) to a stream of tokens per line, possibly adding delimiters
+	 * Lex the provided lines (see {@link slp.core.io.Reader}) to a stream of tokens per line, possibly adding delimiters.
+	 * <b>Note:</b> if possible, use lex(File) instead! Knowing the file location/context can benefit e.g. AST lexers.
+	 * 
 	 * @param lines Lines to lex
 	 * @return A Stream of lines containing a Stream of tokens each
 	 */
@@ -179,7 +185,7 @@ public class LexerRunner {
 			// Concatenate the BOS token with the first sub-stream (first line's stream) specifically to avoid off-setting all the lines.
 			// The EOS token is just appended as an extra line
 			int[] c = { 0 };
-			lexed = lexed.map(l -> c[0]++ < 1 ? Stream.concat(Stream.of(Vocabulary.BOS), l) : l);
+			lexed = lexed.map(l -> c[0]++ == 0 ? Stream.concat(Stream.of(Vocabulary.BOS), l) : l);
 			return Stream.concat(lexed, Stream.of(Stream.of(Vocabulary.EOS)));
 		}
 	}
