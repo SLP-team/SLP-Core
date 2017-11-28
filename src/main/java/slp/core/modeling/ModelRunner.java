@@ -135,7 +135,7 @@ public class ModelRunner {
 					if (++learnStats[0] % 1000000 == 0) {
 						System.out.printf("Counting: %dK tokens processed in %ds\n",
 								Math.round(learnStats[0]/10e3), (System.currentTimeMillis() + learnStats[1])/1000);
-						}
+					}
 				}))
 				.map(l -> l.collect(Collectors.toList()))
 				.forEach(model::learn);
