@@ -14,7 +14,6 @@ import slp.core.modeling.mix.InverseMixModel;
 import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.JMModel;
 import slp.core.modeling.ngram.NGramCache;
-import slp.core.translating.VocabularyRunner;
 import slp.core.util.Pair;
 
 public class JavaRunner {
@@ -35,15 +34,11 @@ public class JavaRunner {
 		//   d. Only lex (and thus implicitly, model) files ending with "java". See also 'useRegex'
 		LexerRunner.useExtension("java");
 		
-		// 2. Vocabulary
-		//    a. Do not cut-off any counts (default)
-		VocabularyRunner.cutOff(0);
-		//    b. Do not close after building (also default)
-		VocabularyRunner.close(false);
-		//    c. Build on train data.
-		//       - Since we are not modifying the defaults in any way, we could also just let the vocabulary be built while training;
-		//       - Building first yields the same result, but could e.g. allow one to write the vocabulary before training.
-		VocabularyRunner.build(train);
+		// 2. Vocabulary:
+		//    - Since we are not modifying the defaults in any way, we'll just let the vocabulary be built while training.
+		//    - Building it first using the default settings (no cut-off, don't close after building)
+		//		should yield the same result, but could e.g. allow one to write the vocabulary before training.
+		//    - If interested, use: VocabularyRunner.build(train);
 		
 		// 3. Model
 		//    a. No per line modeling for Java (default)

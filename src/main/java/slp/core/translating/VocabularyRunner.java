@@ -60,13 +60,14 @@ public class VocabularyRunner {
 			Stream<String> tokens = Files.walk(root.toPath())
 					.map(Path::toFile)
 					.filter(File::isFile)
-					.peek(f -> {
-						if (++c[0] % 1000 == 0) System.out.println("Building vocabulary @ file " + c[0]);
-					})
 					.flatMap(LexerRunner::lex)
-					.flatMap(l -> l);
+					.flatMap(l -> l)
+					.peek(w -> {
+						if (++c[0] % 1000000 == 0)
+							System.out.printf("Building vocabulary, tokens processed: %dK\n", Math.round(c[0]/1e3));
+					});
 			build(tokens);
-			if (c[0] > 1000) System.out.println("Vocabulary constructed on " + c[0] + " files");
+			if (c[0] > 1000000) System.out.println("Vocabulary constructed on " + c[0] + " tokens");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
