@@ -10,21 +10,29 @@ import java.util.stream.IntStream;
 
 import slp.core.util.Pair;
 
-public class TrieCounter extends AbstractTrie {
+public class ArrayTrieCounter extends AbstractTrie {
 
 	public int[] indices;
 	public Object[] successors;
 	private static final double GROWTH_FACTOR = 1.5;
 
-	public TrieCounter() {
+	public ArrayTrieCounter() {
 		this(1);
 	}
 	
-	public TrieCounter(int initSize) {
+	public ArrayTrieCounter(int initSize) {
 		super();
 		this.indices = new int[initSize];
 		this.successors = new Object[initSize];
 		Arrays.fill(this.indices, Integer.MAX_VALUE);
+	}
+
+	@Override
+	public List<Integer> getSuccessors() {
+		return Arrays.stream(this.indices)
+				.filter(i -> i != Integer.MAX_VALUE)
+				.mapToObj(Integer::valueOf)
+				.collect(Collectors.toList());
 	}
 	
 	@Override
@@ -41,10 +49,10 @@ public class TrieCounter extends AbstractTrie {
 
 	@Override
 	AbstractTrie makeNext(int depth) {
-		return new TrieCounter();
+		return new ArrayTrieCounter();
 	}
 	
-	Object getSuccessor(int key) {
+	public Object getSuccessor(int key) {
 		int ix = getSuccIx(key);
 		if (ix < 0) {
 			return null;
@@ -122,7 +130,7 @@ public class TrieCounter extends AbstractTrie {
 			Object value;
 			if (code < 0) {
 				value = in.readObject();
-				this.counts[1 + Math.min(((TrieCounter) value).getCount(), COUNT_OF_COUNTS_CUTOFF)]++;
+				this.counts[1 + Math.min(((ArrayTrieCounter) value).getCount(), COUNT_OF_COUNTS_CUTOFF)]++;
 			}
 			else {
 				value = new int[code];

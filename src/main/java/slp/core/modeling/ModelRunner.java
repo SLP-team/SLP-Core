@@ -101,6 +101,7 @@ public class ModelRunner {
 		return predictionCutoff;
 	}
 
+	private static final long LEARN_PRINT_INTERVAL = 1000000;
 	private static long[] learnStats = new long[2];
 
 	public static void learn(Model model, File file) {
@@ -113,7 +114,7 @@ public class ModelRunner {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		if (learnStats[0] > 1000000) {
+		if (learnStats[0] > LEARN_PRINT_INTERVAL) {
 			System.out.printf("Counting complete: %d tokens processed in %ds\n",
 					learnStats[0], (System.currentTimeMillis() + learnStats[1])/1000);
 		}
@@ -132,9 +133,9 @@ public class ModelRunner {
 		if (perLine) {
 			lexed.map(Vocabulary::toIndices)
 				.map(l -> l.peek(l2 -> {
-					if (++learnStats[0] % 1000000 == 0) {
-						System.out.printf("Counting: %dK tokens processed in %ds\n",
-								Math.round(learnStats[0]/1e3), (System.currentTimeMillis() + learnStats[1])/1000);
+					if (++learnStats[0] % LEARN_PRINT_INTERVAL == 0) {
+						System.out.printf("Counting: %dM tokens processed in %ds\n",
+								Math.round(learnStats[0]/1e6), (System.currentTimeMillis() + learnStats[1])/1000);
 					}
 				}))
 				.map(l -> l.collect(Collectors.toList()))
@@ -142,9 +143,9 @@ public class ModelRunner {
 		}
 		else {
 			model.learn(lexed.map(l -> l.peek(l2 -> {
-					if (++learnStats[0] % 1000000 == 0) {
-						System.out.printf("Counting: %dK tokens processed in %ds\n",
-								Math.round(learnStats[0]/1e3), (System.currentTimeMillis() + learnStats[1])/1000);
+					if (++learnStats[0] % LEARN_PRINT_INTERVAL == 0) {
+						System.out.printf("Counting: %dM tokens processed in %ds\n",
+								Math.round(learnStats[0]/1e6), (System.currentTimeMillis() + learnStats[1])/1000);
 					}
 				}))
 				.flatMap(Vocabulary::toIndices)
@@ -183,8 +184,8 @@ public class ModelRunner {
 		}
 	}
 
+	private static final int MODEL_PRINT_INTERVAL = 100000;
 	private static long[] modelStats = new long[2];
-	
 	private static double[] ent = new double[1];
 	private static double[] mrr = new double[1];
 	
@@ -195,17 +196,17 @@ public class ModelRunner {
 			return Files.walk(file.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
-				.map(f -> modelFile(model, f));
+				.map(f -> Pair.of(f, modelFile(model, f)));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
-	public static Pair<File, List<List<Double>>> modelFile(Model model, File f) {
+	public static List<List<Double>> modelFile(Model model, File f) {
 		model.notify(f);
 		List<List<Double>> lineProbs = modelTokens(model, LexerRunner.lex(f));
-		return Pair.of(f, lineProbs);
+		return lineProbs;
 	}
 
 	public static List<List<Double>> modelLines(Model model, Stream<String> lines) {
@@ -215,17 +216,23 @@ public class ModelRunner {
 	public static List<List<Double>> modelTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
-		long prevCount = modelStats[0];
 		if (perLine) {
 			lineProbs = lexed.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.map(l -> modelSequence(model, l))
+				.peek(l -> {
+					DoubleSummaryStatistics stats = l.stream()
+							.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
+							.mapToDouble(Double::doubleValue).summaryStatistics();
+					long prevCount = modelStats[0];
+					modelStats[0] += stats.getCount();
+					ent[0] += stats.getSum();
+					if (modelStats[0] / MODEL_PRINT_INTERVAL > prevCount / MODEL_PRINT_INTERVAL) {
+						System.out.printf("Modeling: %dK tokens processed in %ds, avg. entropy: %.4f\n",
+								Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+					}
+				})
 				.collect(Collectors.toList());
-			DoubleSummaryStatistics stats = lineProbs.stream()
-					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-					.mapToDouble(l -> l).summaryStatistics();
-			ent[0] += stats.getSum();
-			modelStats[0] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = modelSequence(model, lexed
@@ -233,16 +240,17 @@ public class ModelRunner {
 				.map(l -> l.collect(Collectors.toList()))
 				.peek(l -> lineLengths.add(l.size()))
 				.flatMap(l -> l.stream()).collect(Collectors.toList()));
+			lineProbs = toLines(modeled, lineLengths);
 			DoubleSummaryStatistics stats = modeled.stream()
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
 					.mapToDouble(l -> l).summaryStatistics();
-			ent[0] += stats.getSum();
+			long prevCount = modelStats[0];
 			modelStats[0] += stats.getCount();
-			lineProbs = toLines(modeled, lineLengths);
-		}
-		if (modelStats[0] / 100000 > prevCount / 100000) {
-			System.out.printf("Modeling: %dK tokens processed in %ds, avg. entropy: %.4f\n",
-					Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+			ent[0] += stats.getSum();
+			if (modelStats[0] / MODEL_PRINT_INTERVAL > prevCount / MODEL_PRINT_INTERVAL) {
+				System.out.printf("Modeling: %dK tokens processed in %ds, avg. entropy: %.4f\n",
+						Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+			}
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
@@ -265,17 +273,17 @@ public class ModelRunner {
 			return Files.walk(file.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
-				.map(f -> predictFile(model, f));
+				.map(f -> Pair.of(f, predictFile(model, f)));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
 
-	public static Pair<File, List<List<Double>>> predictFile(Model model, File f) {
+	public static List<List<Double>> predictFile(Model model, File f) {
 		model.notify(f);
 		List<List<Double>> lineProbs = predictTokens(model, LexerRunner.lex(f));
-		return Pair.of(f, lineProbs);
+		return lineProbs;
 	}
 
 	public static List<List<Double>> predictLines(Model model, Stream<String> lines) {
@@ -285,18 +293,24 @@ public class ModelRunner {
 	public static List<List<Double>> predictTokens(Model model, Stream<Stream<String>> lexed) {
 		Vocabulary.setCheckpoint();
 		List<List<Double>> lineProbs;
-		long prevCount = modelStats[0];
 		if (perLine) {
 			lineProbs = lexed
 				.map(Vocabulary::toIndices)
 				.map(l -> l.collect(Collectors.toList()))
 				.map(l -> predictSequence(model, l))
+				.peek(l -> {
+					DoubleSummaryStatistics stats = l.stream()
+							.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
+							.mapToDouble(Double::doubleValue).summaryStatistics();
+					long prevCount = modelStats[0];
+					modelStats[0] += stats.getCount();
+					mrr[0] += stats.getSum();
+					if (modelStats[0] / MODEL_PRINT_INTERVAL > prevCount / MODEL_PRINT_INTERVAL) {
+						System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
+								Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, mrr[0]/modelStats[0]);
+					}
+				})
 				.collect(Collectors.toList());
-			DoubleSummaryStatistics stats = lineProbs.stream()
-					.flatMap(l -> l.stream().skip(LexerRunner.addsSentenceMarkers() ? 1 : 0))
-					.mapToDouble(l -> l).summaryStatistics();
-			mrr[0] += stats.getSum();
-			modelStats[0] += stats.getCount();
 		} else {
 			List<Integer> lineLengths = new ArrayList<>();
 			List<Double> modeled = predictSequence(model, lexed
@@ -308,12 +322,13 @@ public class ModelRunner {
 			DoubleSummaryStatistics stats = modeled.stream()
 					.skip(LexerRunner.addsSentenceMarkers() ? 1 : 0)
 					.mapToDouble(l -> l).summaryStatistics();
-			mrr[0] += stats.getSum();
+			long prevCount = modelStats[0];
 			modelStats[0] += stats.getCount();
-		}
-		if (modelStats[0] / 100000 > prevCount / 100000) {
-			System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
-					Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+			mrr[0] += stats.getSum();
+			if (modelStats[0] / MODEL_PRINT_INTERVAL > prevCount / MODEL_PRINT_INTERVAL) {
+				System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
+						Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+			}
 		}
 		Vocabulary.restoreCheckpoint();
 		return lineProbs;
@@ -350,15 +365,16 @@ public class ModelRunner {
 		return probConf.entrySet().stream()
 			.map(e -> Pair.of(e.getKey(), toProb(e.getValue())))
 			.sorted((p1, p2) -> -Double.compare(p1.right, p2.right))
+			.limit(predictionCutoff)
 			.map(p -> p.left)
 			.collect(Collectors.toList());
 	}
 
-	private static List<List<Double>> toLines(List<Double> modeled, List<Integer> lineLengths) {
-		List<List<Double>> perLine = new ArrayList<>();
+	private static <K> List<List<K>> toLines(List<K> modeled, List<Integer> lineLengths) {
+		List<List<K>> perLine = new ArrayList<>();
 		int ix = 0;
 		for (int i = 0; i < lineLengths.size(); i++) {
-			List<Double> line = new ArrayList<>();
+			List<K> line = new ArrayList<>();
 			for (int j = 0; j < lineLengths.get(i); j++) {
 				line.add(modeled.get(ix++));
 			}
@@ -367,6 +383,10 @@ public class ModelRunner {
 		return perLine;
 	}
 
+	public static DoubleSummaryStatistics getStats(Map<File, List<List<Double>>> fileProbs) {
+		return getStats(fileProbs.entrySet().stream().map(e -> Pair.of(e.getKey(), e.getValue())));
+	}
+	
 	// TODO, invoke next method if possible
 	public static DoubleSummaryStatistics getStats(Stream<Pair<File, List<List<Double>>>> fileProbs) {
 		boolean skip = LexerRunner.addsSentenceMarkers();

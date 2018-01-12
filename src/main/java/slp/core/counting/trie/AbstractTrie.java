@@ -31,12 +31,14 @@ public abstract class AbstractTrie implements Counter {
 	 * whereas TrieCounter always uses a Trie.
 	 */
 	abstract AbstractTrie makeNext(int depth);
+	
+	public abstract List<Integer> getSuccessors();
+	public abstract Object getSuccessor(int key);
 
+	abstract List<Integer> getTopSuccessorsInternal(int limit);
+	
 	abstract void putSuccessor(int key, Object o);
 	abstract void removeSuccessor(int key);
-	abstract Object getSuccessor(int key);
-	
-	abstract List<Integer> getTopSuccessorsInternal(int limit);
 
 	public abstract void readExternal(ObjectInput in) throws IOException, ClassNotFoundException;
 	public abstract void writeExternal(ObjectOutput out) throws IOException;
@@ -167,9 +169,7 @@ public abstract class AbstractTrie implements Counter {
 		}
 	}
 
-	/*
-	 * Abstract members to be implemented
-	 */
+	@Override
 	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
 		Object successor = getSuccessorNode(indices, 0);
 		if (successor == null) return new ArrayList<>();

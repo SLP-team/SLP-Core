@@ -24,14 +24,28 @@ public abstract class AbstractModel implements Model {
 	 * Enable/disable dynamic updating of model, as implemented by underlying model.
 	 * @param dynamic True if the model should update dynamically
 	 */
+	@Override
 	public void setDynamic(boolean dynamic) {
 		this.dynamic = dynamic;
+	}
+	
+	private boolean wasDynamic = false;
+	@Override
+	public void pauseDynamic() {
+		this.wasDynamic = this.dynamic;
+		this.dynamic = false;
+	}
+
+	@Override
+	public void unPauseDynamic() {
+		this.dynamic = this.wasDynamic;
 	}
 
 	/**
 	 * Default implementation of {@link #modelToken(List, int)},
 	 * which invokes {@link #modelAtIndex(List, int)} at each index and takes care of dynamic updating after each token.
 	 */
+	@Override
 	public final Pair<Double, Double> modelToken(List<Integer> input, int i) {
 		Pair<Double, Double> modeled = modelAtIndex(input, i);
 		if (this.dynamic) this.learnToken(input, i);
@@ -44,6 +58,7 @@ public abstract class AbstractModel implements Model {
 	 * Default implementation of {@link #predictToken(List, int)},
 	 * which invokes {@link #predictAtIndex(List, int)} at each index and takes care of dynamic updating for each token.
 	 */
+	@Override
 	public final Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int i) {
 		boolean temp = this.dynamic;
 		this.setDynamic(false);

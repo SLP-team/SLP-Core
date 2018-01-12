@@ -10,10 +10,10 @@ import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
 import slp.core.modeling.Model;
 import slp.core.modeling.ModelRunner;
+import slp.core.modeling.CacheModel;
 import slp.core.modeling.mix.InverseMixModel;
 import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.JMModel;
-import slp.core.modeling.ngram.NGramCache;
 import slp.core.util.Pair;
 
 public class JavaRunner {
@@ -28,7 +28,7 @@ public class JavaRunner {
 		//   a. Set up lexer using a JavaLexer
 		LexerRunner.setLexer(new JavaLexer());
 		//   b. Do not tokenize per line for Java (invoked for the sake of example; false is the default)
-		LexerRunner.perLine(false);
+		LexerRunner.setPerLine(false);
 		//   c. But, do add sentence markers (to start and end of file)
 		LexerRunner.addSentenceMarkers(true);
 		//   d. Only lex (and thus implicitly, model) files ending with "java". See also 'useRegex'
@@ -60,7 +60,7 @@ public class JavaRunner {
 		//       - Then, add an ngram-cache component.
 		//         * Note, order matters! The most local model should be "right-most" so it is called upon last (i.e. "gets the final say")
 		//         * This is also why we apply the cache after the nested model
-		model = new InverseMixModel(model, new NGramCache());
+		model = new InverseMixModel(model, new CacheModel());
 		//       - Finally, enable dynamic updating for the whole mixture (won't affect cache; it's dynamic by default)
 		model.setDynamic(true);
 		
@@ -68,11 +68,7 @@ public class JavaRunner {
 		//    a. Model each file in 'test' recursively
 		Stream<Pair<File, List<List<Double>>>> modeledFiles = ModelRunner.model(model, test);
 		//    b. Retrieve entropy statistics by mapping the entropies per file
-		DoubleSummaryStatistics statistics = modeledFiles.map(pair -> pair.right)
-			// Note the "skip(1)" (per file), since we added delimiters and we generally don't model the start-of-line token
-			.flatMap(f -> f.stream().flatMap(l -> l.stream()).skip(1))		
-			.mapToDouble(d -> d)
-			.summaryStatistics();
+		DoubleSummaryStatistics statistics = ModelRunner.getStats(modeledFiles);
 		
 		System.out.printf("Modeled %d tokens, average entropy:\t%.4f\n", statistics.getCount(), statistics.getAverage());
 	}

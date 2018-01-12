@@ -48,6 +48,18 @@ public abstract class MixModel implements Model {
 	}
 
 	@Override
+	public void pauseDynamic() {
+		this.left.pauseDynamic();
+		this.right.pauseDynamic();
+	}
+
+	@Override
+	public void unPauseDynamic() {
+		this.left.unPauseDynamic();
+		this.right.unPauseDynamic();
+	}
+
+	@Override
 	public void learn(List<Integer> input) {
 		this.left.learn(input);
 		this.right.learn(input);
@@ -123,24 +135,34 @@ public abstract class MixModel implements Model {
 	protected Map<Integer, Pair<Double, Double>> mix(List<Integer> input, int index,
 			Map<Integer, Pair<Double, Double>> res1, Map<Integer, Pair<Double, Double>> res2) {
 		Map<Integer, Pair<Double, Double>> mixed = new HashMap<>();
+		this.left.pauseDynamic();
+		this.right.pauseDynamic();
 		for (int key : res1.keySet()) {
 			Pair<Double, Double> own = res1.get(key);
 			Pair<Double, Double> other = res2.get(key);
 			if (other == null) {
-				Integer prev = input.set(index, key);
+				boolean added = index == input.size();
+				if (added) input.add(0);
+				int prev = input.set(index, key);
 				other = this.right.modelToken(input, index);
-				input.set(index, prev);
+				if (added) input.remove(input.size() - 1);
+				else input.set(index, prev);
 			}
 			mixed.put(key, mix(input, index, own, other));
 		}
 		for (int key : res2.keySet()) {
 			if (res1.containsKey(key)) continue;
 			Pair<Double, Double> own = res2.get(key);
-			Integer prev = input.set(index, key);
+			boolean added = index == input.size();
+			if (added) input.add(0);
+			int prev = input.set(index, key);
 			Pair<Double, Double> other = this.left.modelToken(input, index);
-			input.set(index, prev);
+			if (added) input.remove(input.size() - 1);
+			else input.set(index, prev);
 			mixed.put(key, mix(input, index, own, other));
 		}
+		this.left.unPauseDynamic();
+		this.right.unPauseDynamic();
 		return mixed;
 	}
 }

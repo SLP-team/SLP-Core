@@ -2,7 +2,6 @@ package slp.core.modeling.ngram;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import slp.core.counting.Counter;
-import slp.core.counting.trie.TrieCounter;
+import slp.core.counting.trie.ArrayTrieCounter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
@@ -18,10 +17,10 @@ import slp.core.util.Pair;
 
 public abstract class NGramModel extends AbstractModel {
 	
-	protected Counter counter;
+	public Counter counter;
 
 	public NGramModel() {
-		this(new TrieCounter());
+		this(new ArrayTrieCounter());
 	}
 	
 	public NGramModel(Counter counter) {
@@ -92,32 +91,18 @@ public abstract class NGramModel extends AbstractModel {
 		Set<Integer> predictions = new HashSet<>();
 		int limit = ModelRunner.getPredictionCutoff();
 		for (int i = 0; i < sequence.size(); i++) {
-			predictions.addAll(this.predictWithConfidence(sequence.subList(i, sequence.size()), limit, predictions));
+			predictions.addAll(this.counter.getTopSuccessors(sequence.subList(i, sequence.size()), limit));
 		}
 		return predictions.stream().collect(Collectors.toMap(p -> p, p -> prob(input, index, p)));
 	}
 	
-	private Map<List<Integer>, Pair<Integer, List<Integer>>> mem = new HashMap<>();
-	protected final List<Integer> predictWithConfidence(List<Integer> indices, int limit, Set<Integer> covered) {
-		List<Integer> top;
-		int key = 31*(this.counter.getSuccessorCount() + 31*this.counter.getCount());
-		if (this.mem.containsKey(indices) && this.mem.get(indices).left.equals(key)) {
-			top = this.mem.get(indices).right;
-		}
-		else {
-			if (this.mem.containsKey(indices)) this.mem.clear();
-			top = this.counter.getTopSuccessors(indices, limit);
-			if (this.counter.getSuccessorCount(indices) > 1000) {
-				this.mem.put(indices, Pair.of(key, top));
-			}
-		}
-		return top;
-	}
-
 	private Pair<Double, Double> prob(List<Integer> input, int index, int prediction) {
-		Integer prev = input.set(index, prediction);
+		boolean added = index == input.size();
+		if (added) input.add(0);
+		int prev = input.set(index, prediction);
 		Pair<Double, Double> prob = this.modelAtIndex(input, index);
-		input.set(index, prev);
+		if (added) input.remove(input.size() - 1);
+		else input.set(index, prev);
 		return prob;
 	}
 

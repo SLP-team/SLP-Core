@@ -45,6 +45,8 @@ public interface Model {
 
 	// TODO
 	void setDynamic(boolean dynamic);
+	void pauseDynamic();
+	void unPauseDynamic();
 	
 	/**
 	 * Notify underlying model to learn provided input. May be ignored if no such ability exists.

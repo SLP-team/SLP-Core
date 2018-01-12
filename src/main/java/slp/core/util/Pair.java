@@ -14,6 +14,20 @@ public class Pair<T, V> {
 	}
 	
 	@Override
+	public boolean equals(Object other) {
+		if (other == null) return false;
+		if (!(other instanceof Pair)) return false;
+		@SuppressWarnings("rawtypes")
+		Pair asPair = (Pair) other;
+		return asPair.left.equals(this.left) && asPair.right.equals(this.right);
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.left.hashCode() + this.right.hashCode();
+	}
+	
+	@Override
 	public String toString() {
 		return this.left + " :: " + this.right;
 	}

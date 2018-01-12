@@ -3,12 +3,12 @@ package slp.core.counting;
 import java.io.Externalizable;
 import java.util.List;
 
-import slp.core.counting.trie.TrieCounter;
+import slp.core.counting.trie.ArrayTrieCounter;
 import slp.core.modeling.ngram.NGramModel;
 
 /**
  * Interface for counter implementations that can be used by count-based models,
- * most notoriously the {@link TrieCounter} which provides a rather efficient implementation
+ * most notably the {@link ArrayTrieCounter} which provides a rather efficient implementation
  * that is currently used by the {@link NGramModel}s.
  * 
  * @author Vincent Hellendoorn

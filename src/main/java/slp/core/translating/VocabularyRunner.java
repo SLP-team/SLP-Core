@@ -20,6 +20,7 @@ import slp.core.lexing.LexerRunner;
 
 public class VocabularyRunner {
 	
+	private static final int PRINT_FREQ = 1000000;
 	private static boolean close = false;
 	private static int cutOff = 0;
 
@@ -63,11 +64,13 @@ public class VocabularyRunner {
 					.flatMap(LexerRunner::lex)
 					.flatMap(l -> l)
 					.peek(w -> {
-						if (++c[0] % 1000000 == 0)
-							System.out.printf("Building vocabulary, tokens processed: %dK\n", Math.round(c[0]/1e3));
+						if (++c[0] % PRINT_FREQ == 0) {
+							System.out.printf("Building vocabulary: tokens processed: %dM, size: %dK\n",
+									Math.round(c[0]/PRINT_FREQ), Math.round(Vocabulary.size()/1e3));
+						}
 					});
 			build(tokens);
-			if (c[0] > 1000000) System.out.println("Vocabulary constructed on " + c[0] + " tokens");
+			if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + Vocabulary.size());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -103,7 +106,7 @@ public class VocabularyRunner {
 	 */
 	public static void read(File file) {
 		Vocabulary.reset();
-		Reader.readLines(file)
+		Reader.readLines(file).stream()
 			.map(x -> x.split("\t", 3))
 			.filter(x -> Integer.parseInt(x[0]) >= cutOff)
 			.forEachOrdered(split -> {

@@ -42,8 +42,9 @@ public class LexerRunner {
 	}
 
 	/**
-	 * Enforce adding delimiters to text to lex (i.e. "&lt;s&gt;", ""&lt;/s&gt;"; see {@link Vocabulary})
-	 * to each sentence (by default the whole file, unless {@link #perLine(boolean)} is set,
+	 * If set to 'true', enforces adding delimiters to the text to lex
+	 * (i.e. "&lt;s&gt;", ""&lt;/s&gt;"; see {@link Vocabulary}), to each sentence.
+	 * A sentence is a whole file by default, unless {@link #setPerLine(boolean)} is set to true
 	 * in which case each line is treated as a sentence).
 	 * <br />
 	 * Default: false, which assumes these have already been added.
@@ -61,10 +62,13 @@ public class LexerRunner {
 	}
 	
 	/**
-	 * Enforce lexing each line separately. This only has effect is {@link #useDelimiters()} is set,
+	 * If set to 'true', enforces lexing each line separately.
+	 * This only has effect is {@link #useDelimiters()} is set,
 	 * in which case this method prepends delimiters on each line rather than the full content.
+	 * <br />
+	 * Default: set to false.
 	 */
-	public static void perLine(boolean perLine) {
+	public static void setPerLine(boolean perLine) {
 		LexerRunner.perLine = perLine;
 	}
 	
@@ -155,11 +159,7 @@ public class LexerRunner {
 	 */
 	public static Stream<Stream<String>> lex(File file) {
 		if (!file.getName().matches(regex)) return Stream.empty();
-		Stream<Stream<String>> lexed = lexer.lex(file)
-				.map(l -> l.map(Vocabulary::toIndex))
-				.map(l -> l.map(t -> translate ? t+"" : Vocabulary.toWord(t)));
-		if (sentenceMarkers) return withDelimiters(lexed);
-		else return lexed;
+		return lexTokens(lexer.lex(file));
 	}
 	
 	/**
@@ -170,7 +170,11 @@ public class LexerRunner {
 	 * @return A Stream of lines containing a Stream of tokens each
 	 */
 	public static Stream<Stream<String>> lex(Stream<String> lines) {
-		Stream<Stream<String>> lexed = lexer.lex(lines)
+		return lexTokens(lexer.lex(lines));
+	}
+
+	private static Stream<Stream<String>> lexTokens(Stream<Stream<String>> tokens) {
+		Stream<Stream<String>> lexed = tokens
 				.map(l -> l.map(Vocabulary::toIndex))
 				.map(l -> l.map(t -> translate ? t+"" : Vocabulary.toWord(t)));
 		if (sentenceMarkers) return withDelimiters(lexed);

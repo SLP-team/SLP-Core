@@ -1,30 +1,41 @@
-package slp.core.modeling.ngram;
+package slp.core.modeling;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import slp.core.counting.trie.TrieCounter;
-import slp.core.modeling.AbstractModel;
+import slp.core.modeling.ngram.NGramModel;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
-public class NGramCache extends AbstractModel {
+public class CacheModel extends AbstractModel {
 
 	public static final int DEFAULT_CAPACITY = 5000;
 	private final int capacity;
 	
-	private NGramModel model;
+	private Model model;
 	private final Deque<List<Integer>> cache;
-	
-	public NGramCache() {
+
+	public CacheModel() {
 		this(DEFAULT_CAPACITY);
 	}
+	
+	public CacheModel(Model model) {
+		this(model, DEFAULT_CAPACITY);
+	}
 
-	public NGramCache(int capacity) {
-		this.model = NGramModel.standard();
+	public CacheModel(int capacity) {
+		this(NGramModel.standard(), capacity);
+	}
+
+	public CacheModel(Model model, int capacity) {
+		this.model = model;
 		// A cache is dynamic by default and only acts statically in prediction tasks
 		setDynamic(true);
 		
@@ -34,20 +45,30 @@ public class NGramCache extends AbstractModel {
 	
 	@Override
 	public void notify(File next) {
-		this.model = NGramModel.standard(new TrieCounter());
+		try {
+			this.model = this.model.getClass().getConstructor().newInstance();
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| NoSuchMethodException | SecurityException e) {
+			this.model = NGramModel.standard();
+		}
 		this.cache.clear();
 	}
 
+	private Map<List<Integer>, Set<Integer>> cached = new HashMap<>();
 	@Override
 	public void learnToken(List<Integer> input, int index) {
 		if (this.capacity == 0) return;
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		this.cache.addLast(sequence);
-		for (int i = 0; i < sequence.size(); i++) this.model.counter.count(sequence.subList(i, sequence.size()));
+		store(sequence);
+		this.model.learnToken(sequence, sequence.size() - 1);
 		if (this.cache.size() > this.capacity) {
 			List<Integer> removed = this.cache.removeFirst();
-			for (int i = 0; i < removed.size(); i++) this.model.counter.unCount(removed.subList(i, removed.size()));
+			this.model.forgetToken(removed, removed.size() - 1);
 		}
+	}
+
+	private void store(List<Integer> sequence) {
+		this.cache.addLast(new ArrayList<>(sequence));
 	}
 
 	@Override

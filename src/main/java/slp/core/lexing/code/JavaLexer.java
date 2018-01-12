@@ -39,12 +39,12 @@ public class JavaLexer implements Lexer {
 		while (true) {
 			try {
 				nextToken = scanner.getNextToken();
-				if (nextToken == ITerminalSymbols.TokenNameEOF) break;
 				int ln = scanner.getLineNumber(scanner.getCurrentTokenStartPosition());
 				if (ln > line) {
 					for (int i = line + 1; i <= ln; i++) lineTokens.add(new ArrayList<>());
 					line = ln;
 				}
+				if (nextToken == ITerminalSymbols.TokenNameEOF) break;
 			} catch (InvalidInputException e) {
 				continue;
 			}

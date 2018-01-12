@@ -30,7 +30,7 @@ public class NLRunner {
 		//   c. Set delimiters for each line separately (often applicable, though not necessary for NLP)
 		//      - Note that this does not imply or exclude modeling per file; that must explicitly set as below.
 		//      - There are cases in which we want to add per-line delimiters but still model a whole file as one.
-		LexerRunner.perLine(true);
+		LexerRunner.setPerLine(true);
 		
 		// 2. Vocabulary
 		//    a. Omit any events seen less than twice (i.e. one time) in training data

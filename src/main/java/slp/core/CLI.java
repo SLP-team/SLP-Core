@@ -23,12 +23,12 @@ import slp.core.lexing.simple.TokenizedLexer;
 import slp.core.lexing.simple.WhitespaceLexer;
 import slp.core.modeling.Model;
 import slp.core.modeling.ModelRunner;
+import slp.core.modeling.CacheModel;
 import slp.core.modeling.mix.InverseMixModel;
 import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.ADMModel;
 import slp.core.modeling.ngram.ADModel;
 import slp.core.modeling.ngram.JMModel;
-import slp.core.modeling.ngram.NGramCache;
 import slp.core.modeling.ngram.NGramModel;
 import slp.core.modeling.ngram.WBModel;
 import slp.core.translating.Vocabulary;
@@ -183,7 +183,7 @@ public class CLI {
 
 	private static void setupLexerRunner() {
 		LexerRunner.setLexer(getLexer());
-		if (isSet(PER_LINE)) LexerRunner.perLine(true);
+		if (isSet(PER_LINE)) LexerRunner.setPerLine(true);
 		if (isSet(ADD_DELIMS)) LexerRunner.addSentenceMarkers(true);
 		if (isSet(EXTENSION)) LexerRunner.useExtension(getArg(EXTENSION));
 	}
@@ -287,7 +287,7 @@ public class CLI {
 				m = new NestedModel(new File(getArg(TEST)), m);
 			}
 		}
-		if (isSet(CACHE)) m = new InverseMixModel(m, new NGramCache());
+		if (isSet(CACHE)) m = new InverseMixModel(m, new CacheModel());
 		if (isSet(DYNAMIC)) m.setDynamic(true);
 		return m;
 	}

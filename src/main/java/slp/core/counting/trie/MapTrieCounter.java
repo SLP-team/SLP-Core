@@ -3,7 +3,9 @@ package slp.core.counting.trie;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
@@ -29,28 +31,43 @@ public class MapTrieCounter extends AbstractTrie {
 		super();
 		this.map = new Int2ObjectOpenHashMap<>(initSize);
 	}
+
+	@Override
+	public List<Integer> getSuccessors() {
+		return this.map.keySet().stream().collect(Collectors.toList());
+	}
 	
+	private static Map<Integer, List<Integer>> cache = new HashMap<>();
 	@Override
 	public List<Integer> getTopSuccessorsInternal(int limit) {
-		return this.map.int2ObjectEntrySet().stream()
+		int key = hashCode();
+		if (cache.containsKey(key)) return cache.get(key);
+		List<Integer> topSuccessors = this.map.int2ObjectEntrySet().stream()
 			.map(e -> Pair.of(e.getIntKey(), getCount(e.getValue())))
 			.sorted((p1, p2) -> -Integer.compare(p1.right, p2.right))
 			.limit(limit)
 			.map(p -> p.left)
 			.collect(Collectors.toList());
+		if (this.getSuccessorCount() > 100) cache.put(key, topSuccessors);
+		return topSuccessors;
+	}
+
+	@Override
+	public int hashCode() {
+		return super.hashCode() + 31*(this.getSuccessorCount() + 31*this.getCount());
 	}
 
 	@Override
 	AbstractTrie makeNext(int depth) {
 		AbstractTrie newNext;
 		if (depth <= MAX_DEPTH_MAP_TRIE) newNext = new MapTrieCounter(1);
-		else newNext = new TrieCounter();
+		else newNext = new ArrayTrieCounter();
 		return newNext;
 	}
 
 
 	@Override
-	Object getSuccessor(int next) {
+	public Object getSuccessor(int next) {
 		return this.map.get(next);
 	}
 
@@ -77,7 +94,7 @@ public class MapTrieCounter extends AbstractTrie {
 			int code = in.readInt();
 			Object value;
 			if (code < 0) {
-				if (code < -1) value = new TrieCounter();
+				if (code < -1) value = new ArrayTrieCounter();
 				else value = new MapTrieCounter();
 				((AbstractTrie) value).readExternal(in);
 				this.counts[1 + Math.min(((AbstractTrie) value).getCount(), COUNT_OF_COUNTS_CUTOFF)]++;
@@ -107,7 +124,7 @@ public class MapTrieCounter extends AbstractTrie {
 				for (int j = 0; j < arr.length; j++) out.writeInt(arr[j]);
 			}
 			else {
-				if (o instanceof TrieCounter) out.writeInt(-2);
+				if (o instanceof ArrayTrieCounter) out.writeInt(-2);
 				else out.writeInt(-1);
 				((AbstractTrie) o).writeExternal(out);
 			}

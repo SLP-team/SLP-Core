@@ -14,16 +14,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class Reader {
 
-	public static Stream<String> readLines(File file) {
+	public static List<String> readLines(File file) {
 		try {
 			CharsetDecoder dec = StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.IGNORE);
 			try (BufferedReader br = new BufferedReader(Channels.newReader(FileChannel.open(file.toPath()), dec, -1))) {
 				List<String> lines = br.lines().collect(Collectors.toList());
-				return lines.stream();
+				return lines;
 			}
 		} catch (IOException | UncheckedIOException e) {
 			System.err.println("Reader.readLines(): Files.lines failed, reading full file using BufferedReader instead");
@@ -37,7 +36,7 @@ public class Reader {
 				e2.printStackTrace();
 				return null;
 			}
-			return lines.stream();
+			return lines;
 		}
 	}
 }
