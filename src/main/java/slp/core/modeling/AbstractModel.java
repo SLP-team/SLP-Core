@@ -29,16 +29,23 @@ public abstract class AbstractModel implements Model {
 		this.dynamic = dynamic;
 	}
 	
+	private int dynamicDepth = 0;
 	private boolean wasDynamic = false;
 	@Override
 	public void pauseDynamic() {
-		this.wasDynamic = this.dynamic;
+		this.wasDynamic |= this.dynamic;
+		this.dynamicDepth++;
 		this.dynamic = false;
 	}
 
 	@Override
 	public void unPauseDynamic() {
-		this.dynamic = this.wasDynamic;
+		if (this.wasDynamic) {
+			if (--this.dynamicDepth == 0) {
+				this.dynamic = true;
+				this.wasDynamic = false;
+			}
+		}
 	}
 
 	/**

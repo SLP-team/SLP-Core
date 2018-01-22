@@ -9,7 +9,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import slp.core.counting.Counter;
-import slp.core.counting.trie.ArrayTrieCounter;
+import slp.core.counting.trie.MapTrieCounter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
@@ -20,7 +20,7 @@ public abstract class NGramModel extends AbstractModel {
 	public Counter counter;
 
 	public NGramModel() {
-		this(new ArrayTrieCounter());
+		this(new MapTrieCounter());
 	}
 	
 	public NGramModel(Counter counter) {
@@ -89,8 +89,9 @@ public abstract class NGramModel extends AbstractModel {
 	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		List<Integer> sequence = NGramSequencer.sequenceAt(input, index - 1);
 		Set<Integer> predictions = new HashSet<>();
-		int limit = ModelRunner.getPredictionCutoff();
-		for (int i = 0; i < sequence.size(); i++) {
+		for (int i = 0; i <= sequence.size(); i++) {
+			int limit = ModelRunner.getPredictionCutoff() - predictions.size();
+			if (limit <= 0) break;
 			predictions.addAll(this.counter.getTopSuccessors(sequence.subList(i, sequence.size()), limit));
 		}
 		return predictions.stream().collect(Collectors.toMap(p -> p, p -> prob(input, index, p)));

@@ -75,25 +75,25 @@ public abstract class AbstractTrie implements Counter {
 	private final long[] getCounts(List<Integer> indices, int index) {
 		Integer next = indices.get(index);
 		Object succ = this.getSuccessor(next);
-		long[] counts = new long[2];
 		boolean nearLast = index == indices.size() - 1;
+		// Recurse if applicable
+		if (succ != null && (succ instanceof AbstractTrie)) {
+			AbstractTrie successor = (AbstractTrie) succ;
+			if (!nearLast) return successor.getCounts(indices, index + 1);
+			else return new long[] { successor.getCount(), this.counts[1] };
+		}
+		// Else, return counts from array if present
+		long[] counts = new long[2];
 		if (nearLast) counts[1] = this.counts[1];
 		if (succ != null) {
-			if (succ instanceof AbstractTrie) {
-				AbstractTrie successor = (AbstractTrie) succ;
-				if (!nearLast) return successor.getCounts(indices, index + 1);
-				counts[0] = successor.getCount();
+			int[] successor = (int[]) succ;
+			if (ArrayStorage.checkPartialSequence(indices, index, successor)) {
+				counts[0] = successor[0];
+				if (!nearLast) counts[1] = counts[0];
 			}
-			else {
-				int[] successor = (int[]) succ;
-				if (ArrayStorage.checkPartialSequence(indices, index, successor)) {
-					counts[0] = successor[0];
-					if (!nearLast) counts[1] = counts[0];
-				}
-				else if (!nearLast && successor.length >= indices.size() - index
-						&& ArrayStorage.checkPartialSequence(indices.subList(0, indices.size() - 1), index, successor)) {
-					counts[1] = successor[0];
-				}
+			else if (!nearLast && successor.length >= indices.size() - index
+					&& ArrayStorage.checkPartialSequence(indices.subList(0, indices.size() - 1), index, successor)) {
+				counts[1] = successor[0];
 			}
 		}
 		return counts;
@@ -222,6 +222,12 @@ public abstract class AbstractTrie implements Counter {
 
 	private void updateTrie(List<Integer> indices, int index, int adj, Object succ) {
 		AbstractTrie next = (AbstractTrie) succ;
+		if (next instanceof ArrayTrieCounter) {
+			ArrayTrieCounter arrayCounter = (ArrayTrieCounter) next;
+			if (arrayCounter.indices.length > 10) {
+				next = promoteArrayToMap(indices, index, arrayCounter);
+			}
+		}
 		next.update(indices, index + 1, adj);
 		updateCoCs(next.getCount(), adj);
 		if (next.getCount() == 0) {
@@ -250,6 +256,19 @@ public abstract class AbstractTrie implements Counter {
 		}
 	}
 
+	private AbstractTrie promoteArrayToMap(List<Integer> indices, int index, ArrayTrieCounter counter) {
+		AbstractTrie newNext = new MapTrieCounter();
+		newNext.counts = counter.counts;
+		for (int i = 0; i < counter.indices.length; i++) {
+			int ix = counter.indices[i];
+			if (ix == Integer.MAX_VALUE) continue;
+			Object successor = counter.successors[i];
+			newNext.putSuccessor(ix, successor);
+		}
+		this.putSuccessor(indices.get(index), newNext);
+		return newNext;
+	}
+		
 	private AbstractTrie promoteArrayToTrie(List<Integer> indices, int index, int[] successor) {
 		AbstractTrie newNext = makeNext(index);
 		newNext.updateCount(successor[0]);

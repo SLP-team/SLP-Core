@@ -26,6 +26,10 @@ public class NGramSequencer {
 		return result;
 	}
 	
+	/**
+	 * Returns the longest possible sublist that doesn't exceed {@linkplain ModelRunner#getNGramOrder()} in length
+	 * and <u>includes</u> the token at index {@code index}.
+	 */
 	public static List<Integer> sequenceAt(List<Integer> tokens, int index) {
 		return tokens.subList(Math.max(0, index - ModelRunner.getNGramOrder() + 1), index + 1);
 	}

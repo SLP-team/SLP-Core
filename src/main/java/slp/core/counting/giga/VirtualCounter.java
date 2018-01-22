@@ -84,9 +84,9 @@ public class VirtualCounter implements Counter {
 
 	@Override
 	public List<Integer> getTopSuccessors(List<Integer> indices, int limit) {
-		if (indices.isEmpty()) return getCounter(indices).getTopSuccessors(indices, limit);
+		if (!indices.isEmpty()) return getCounter(indices).getTopSuccessors(indices, limit);
 		else {
-			// TODO
+			// TODO: should really include all counters' options here
 			return getCounter(indices).getTopSuccessors(indices, limit);
 		}
 	}

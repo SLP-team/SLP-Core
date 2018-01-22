@@ -46,6 +46,18 @@ public class Vocabulary {
 		addUnk();
 	}
 	
+	public static Map<String, Integer> wordIndices() {
+		return wordIndices;
+	}
+	
+	public static List<String> words() {
+		return words;
+	}
+	
+	public static List<Integer> counts() {
+		return counts;
+	}
+	
 	public static int size() {
 		return words.size();
 	}

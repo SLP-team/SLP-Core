@@ -327,7 +327,7 @@ public class ModelRunner {
 			mrr[0] += stats.getSum();
 			if (modelStats[0] / MODEL_PRINT_INTERVAL > prevCount / MODEL_PRINT_INTERVAL) {
 				System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
-						Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, ent[0]/modelStats[0]);
+						Math.round(modelStats[0]/1e3), (System.currentTimeMillis() + modelStats[1])/1000, mrr[0]/modelStats[0]);
 			}
 		}
 		Vocabulary.restoreCheckpoint();

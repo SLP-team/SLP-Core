@@ -3,6 +3,8 @@ package slp.core.counting.trie;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +13,8 @@ import java.util.stream.Collectors;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import slp.core.util.Pair;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 
 public class MapTrieCounter extends AbstractTrie {
 	/**
@@ -19,8 +22,9 @@ public class MapTrieCounter extends AbstractTrie {
 	 * no of distinct successors seen once, twice, up to the COCcutoff in Configuration
 	 */
 	private Int2ObjectMap<Object> map;
+	private IntList pseudoOrdering;
 
-	// Maximum depth in trie to use Map-tries, after this regular Tries are used, which are slower but more memory-efficient
+	// Maximum depth in trie to use Map-tries, after this Array-Tries are used, which are slower but more memory-efficient
 	private static final int MAX_DEPTH_MAP_TRIE = 1;
 	
 	public MapTrieCounter() {
@@ -30,6 +34,8 @@ public class MapTrieCounter extends AbstractTrie {
 	public MapTrieCounter(int initSize) {
 		super();
 		this.map = new Int2ObjectOpenHashMap<>(initSize);
+		this.map.defaultReturnValue(null);
+		this.pseudoOrdering = new IntArrayList();
 	}
 
 	@Override
@@ -37,24 +43,28 @@ public class MapTrieCounter extends AbstractTrie {
 		return this.map.keySet().stream().collect(Collectors.toList());
 	}
 	
-	private static Map<Integer, List<Integer>> cache = new HashMap<>();
+	private static Map<Integer, Integer> cache = new HashMap<>();
 	@Override
 	public List<Integer> getTopSuccessorsInternal(int limit) {
-		int key = hashCode();
-		if (cache.containsKey(key)) return cache.get(key);
-		List<Integer> topSuccessors = this.map.int2ObjectEntrySet().stream()
-			.map(e -> Pair.of(e.getIntKey(), getCount(e.getValue())))
-			.sorted((p1, p2) -> -Integer.compare(p1.right, p2.right))
-			.limit(limit)
-			.map(p -> p.left)
-			.collect(Collectors.toList());
-		if (this.getSuccessorCount() > 100) cache.put(key, topSuccessors);
+		int classKey = this.hashCode();
+		int countsKey = this.keyCode();
+		Integer cached = cache.get(classKey);
+		if (cached == null || cached != countsKey) {
+			Collections.sort(this.pseudoOrdering, (i1, i2) -> compareCounts(i1, i2));
+		}
+		int end = Math.min(this.pseudoOrdering.size(), limit);
+		List<Integer> topSuccessors = new ArrayList<>(this.pseudoOrdering.subList(0, end));
+		if (this.getSuccessorCount() > 10) cache.put(classKey, countsKey);
 		return topSuccessors;
 	}
 
 	@Override
 	public int hashCode() {
-		return super.hashCode() + 31*(this.getSuccessorCount() + 31*this.getCount());
+		return super.hashCode();
+	}
+	
+	private int keyCode() {
+		return 31*(this.getSuccessorCount() + 31*this.getCount());
 	}
 
 	@Override
@@ -65,7 +75,6 @@ public class MapTrieCounter extends AbstractTrie {
 		return newNext;
 	}
 
-
 	@Override
 	public Object getSuccessor(int next) {
 		return this.map.get(next);
@@ -73,12 +82,23 @@ public class MapTrieCounter extends AbstractTrie {
 
 	@Override
 	void putSuccessor(int next, Object o) {
-		this.map.put(next, o);
+		Object curr = this.map.put(next, o);
+		if (curr == null) this.pseudoOrdering.add(next);
+	}
+
+	private int compareCounts(Integer i1, Integer i2) {
+		int base = -Integer.compare(getCount(this.map.get((int) i1)), getCount(this.map.get((int) i2)));
+		if (base != 0) return base;
+		return Integer.compare(i1, i2);
 	}
 
 	@Override
 	void removeSuccessor(int next) {
-		this.map.remove(next);
+		Object removed = this.map.remove(next);
+		this.pseudoOrdering.rem(next);
+		if (removed instanceof MapTrieCounter) {
+			cache.remove(((MapTrieCounter) removed).hashCode());
+		}
 	}
 
 	@Override
@@ -104,7 +124,7 @@ public class MapTrieCounter extends AbstractTrie {
 				for (int j = 0; j < code; j++) ((int[]) value)[j] = in.readInt();
 				this.counts[1 + Math.min(((int[]) value)[0], COUNT_OF_COUNTS_CUTOFF)]++;
 			}
-			this.map.put(key, value);
+			this.putSuccessor(key, value);
 		}
 	}
 
