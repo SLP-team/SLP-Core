@@ -119,6 +119,18 @@ public class Vocabulary {
 		}
 		return index;
 	}
+	
+	public static Integer getCount(String token) {
+		Integer index = wordIndices.get(token);
+		if (index != null) {
+			return getCount(index);
+		}
+		return 0;
+	}
+
+	private static Integer getCount(Integer index) {
+		return counts.get(index);
+	}
 
 	public static Stream<String> toWords(Stream<Integer> indices) {
 		return indices.map(Vocabulary::toWord);

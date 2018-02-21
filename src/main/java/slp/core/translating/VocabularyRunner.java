@@ -94,7 +94,7 @@ public class VocabularyRunner {
 				Vocabulary.store(token, count);
 			}
 		}
-		Vocabulary.store(Vocabulary.UNK, unkCount);
+		Vocabulary.store(Vocabulary.UNK, Vocabulary.getCount(Vocabulary.UNK) + unkCount);
 		if (close) Vocabulary.close();
 	}
 	

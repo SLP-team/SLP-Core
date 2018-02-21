@@ -130,7 +130,7 @@ public class ArrayTrieCounter extends AbstractTrie {
 			Object value;
 			if (code < 0) {
 				value = in.readObject();
-				this.counts[1 + Math.min(((ArrayTrieCounter) value).getCount(), COUNT_OF_COUNTS_CUTOFF)]++;
+				this.counts[1 + Math.min(((AbstractTrie) value).getCount(), COUNT_OF_COUNTS_CUTOFF)]++;
 			}
 			else {
 				value = new int[code];
