@@ -28,14 +28,17 @@ public class Vocabulary {
 	static Map<String, Integer> wordIndices;
 	static List<String> words;
 	static List<Integer> counts;
+	static int size;
+	
 	private static boolean closed;
-
+	
 	static { reset(); }
 	
 	private static void addUnk() {
 		wordIndices.put(UNK, 0);
 		words.add(UNK);
 		counts.add(0);
+		size++;
 	}
 	
 	public static void reset() {
@@ -43,6 +46,7 @@ public class Vocabulary {
 		words = new ArrayList<>();
 		counts = new ArrayList<>();
 		closed = false;
+		size = 0;
 		addUnk();
 	}
 	
@@ -59,7 +63,15 @@ public class Vocabulary {
 	}
 	
 	public static int size() {
-		return words.size();
+		return size;
+	}
+	
+	/**
+	 * To be determined if this is a good solution to false vocabulary inflation
+	 * @param offset
+	 */
+	public static void adjustSize(int offset) {
+		size += offset;
 	}
 	
 	public static void close() {
@@ -80,6 +92,7 @@ public class Vocabulary {
 			counts.remove(counts.size() - 1);
 			String word = words.remove(words.size() - 1);
 			wordIndices.remove(word);
+			size--;
 		}
 	}
 	
@@ -90,6 +103,7 @@ public class Vocabulary {
 			wordIndices.put(token, index);
 			words.add(token);
 			counts.add(count);
+			size++;
 		}
 		else {
 			counts.set(index, count);
@@ -114,6 +128,7 @@ public class Vocabulary {
 				index = wordIndices.size();
 				wordIndices.put(token, index);
 				words.add(token);
+				size++;
 				counts.add(1);
 			}
 		}

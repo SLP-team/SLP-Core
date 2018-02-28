@@ -112,15 +112,11 @@ public class VocabularyRunner {
 			.forEachOrdered(split -> {
 				Integer count = Integer.parseInt(split[0]);
 				Integer index = Integer.parseInt(split[1]);
+				if (index != Vocabulary.size) {
+					System.out.println("VocabularyRunner.read(): non-consecutive indices while reading vocabulary!");
+				}
 				String token = split[2];
-				if (token.equals(Vocabulary.UNK)) {
-					Vocabulary.counts.set(0, count);
-				}
-				else {
-					Vocabulary.counts.add(count);
-					Vocabulary.words.add(token);
-					Vocabulary.wordIndices.put(token, index);
-				}
+				Vocabulary.store(token, count);
 			});
 		if (close) Vocabulary.close();
 	}

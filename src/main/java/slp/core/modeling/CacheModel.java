@@ -8,10 +8,8 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import slp.core.modeling.ngram.NGramModel;
-import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
 public class CacheModel extends AbstractModel {
@@ -20,7 +18,8 @@ public class CacheModel extends AbstractModel {
 	private final int capacity;
 	
 	private Model model;
-	private final Deque<List<Integer>> cache;
+	private final Deque<Pair<List<Integer>, Integer>> cache;
+	private final Map<Integer, List<Integer>> cachedRefs;
 
 	public CacheModel() {
 		this(DEFAULT_CAPACITY);
@@ -40,7 +39,8 @@ public class CacheModel extends AbstractModel {
 		setDynamic(true);
 		
 		this.capacity = capacity;
-		this.cache = new ArrayDeque<List<Integer>>(this.capacity);
+		this.cache = new ArrayDeque<>(this.capacity);
+		this.cachedRefs = new HashMap<>();
 	}
 	
 	@Override
@@ -52,23 +52,28 @@ public class CacheModel extends AbstractModel {
 			this.model = NGramModel.standard();
 		}
 		this.cache.clear();
+		this.cachedRefs.clear();
 	}
 
-	private Map<List<Integer>, Set<Integer>> cached = new HashMap<>();
 	@Override
 	public void learnToken(List<Integer> input, int index) {
 		if (this.capacity == 0) return;
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
-		store(sequence);
-		this.model.learnToken(sequence, sequence.size() - 1);
+		store(input, index);
+		this.model.learnToken(input, index);
 		if (this.cache.size() > this.capacity) {
-			List<Integer> removed = this.cache.removeFirst();
-			this.model.forgetToken(removed, removed.size() - 1);
+			Pair<List<Integer>, Integer> removed = this.cache.removeFirst();
+			this.model.forgetToken(removed.left, removed.right);
 		}
 	}
 
-	private void store(List<Integer> sequence) {
-		this.cache.addLast(new ArrayList<>(sequence));
+	private void store(List<Integer> input, int index) {
+		int hash = input.hashCode();
+		List<Integer> list = this.cachedRefs.get(hash);
+		if (list == null) {
+			list = new ArrayList<>(input);
+			this.cachedRefs.put(hash, list);
+		}
+		this.cache.addLast(Pair.of(list, index));
 	}
 
 	@Override
