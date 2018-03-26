@@ -60,7 +60,7 @@ public class IntsCreator {
 	private static void write(FileWriter fw, List<String> tokens) throws IOException {
 		for (String token : tokens) {
 			fw.append(token);
-			fw.append("\t");
+			fw.append(" ");
 		}
 		fw.append(Vocabulary.EOS);
 		fw.append("\n");
