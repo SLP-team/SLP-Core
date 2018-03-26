@@ -77,7 +77,7 @@ public abstract class NGramModel extends AbstractModel {
 			probability = (1 - conf)*probability + conf*prob;
 			hits++;
 		}
-		probability /= mass;
+		if (mass > 0) probability /= mass;
 		// In the new model, final confidence is same for all n-gram models, proportional to longest context seen
 		double confidence = (1 - Math.pow(2, -hits));
 		return Pair.of(probability, confidence);

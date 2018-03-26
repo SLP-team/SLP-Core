@@ -100,6 +100,12 @@ public interface Model {
 	 */
 	void forgetToken(List<Integer> input, int index);
 
+	/**
+	 * Part of new interface design. Currently obsolete, do not use.
+	 */
+	default double getConfidence(List<Integer> input, int index) {
+		return 0.0;
+	}
 
 	/**
 	 * Model each token in input to a pair of probability/confidence (see {@link #modelToken(List, int)}.

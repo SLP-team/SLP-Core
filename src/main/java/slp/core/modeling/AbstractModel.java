@@ -19,6 +19,8 @@ import slp.core.util.Pair;
 public abstract class AbstractModel implements Model {
 	
 	protected boolean dynamic = false;
+	private boolean wasDynamic = false;
+	private int dynamicDepth = 0;
 	
 	/**
 	 * Enable/disable dynamic updating of model, as implemented by underlying model.
@@ -27,24 +29,19 @@ public abstract class AbstractModel implements Model {
 	@Override
 	public void setDynamic(boolean dynamic) {
 		this.dynamic = dynamic;
+		this.wasDynamic = dynamic;
 	}
 	
-	private int dynamicDepth = 0;
-	private boolean wasDynamic = false;
 	@Override
 	public void pauseDynamic() {
-		this.wasDynamic |= this.dynamic;
 		this.dynamicDepth++;
 		this.dynamic = false;
 	}
 
 	@Override
 	public void unPauseDynamic() {
-		if (this.wasDynamic) {
-			if (--this.dynamicDepth == 0) {
-				this.dynamic = true;
-				this.wasDynamic = false;
-			}
+		if (this.wasDynamic && this.dynamicDepth > 0 && --this.dynamicDepth == 0) {
+			this.dynamic = true;
 		}
 	}
 

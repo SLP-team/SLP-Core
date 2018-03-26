@@ -18,10 +18,8 @@ public class InverseMixModel extends MixModel {
 		}
 		else if (res2.right.equals(0.0)) return res1;
 		else if (res1.right.equals(0.0)) return res2;
-		double lNorm = 1/(1 - res1.right);
-		double rNorm = 1/(1 - res2.right);
-		if (lNorm > 1000) lNorm = 1000;
-		if (rNorm > 1000) rNorm = 1000;
+		double lNorm = res1.right > 0.999 ? 1000 : 1/(1 - res1.right);
+		double rNorm = res2.right > 0.999 ? 1000 : 1/(1 - res2.right);
 		double probability = (res1.left*lNorm + res2.left*rNorm)/(lNorm + rNorm);
 		double confidence = Math.max(res1.right, res2.right);
 		return Pair.of(probability, confidence);
