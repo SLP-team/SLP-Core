@@ -8,12 +8,12 @@ import java.util.stream.Stream;
 import slp.core.counting.giga.GigaCounter;
 import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
-import slp.core.modeling.Model;
-import slp.core.modeling.ModelRunner;
 import slp.core.modeling.CacheModel;
+import slp.core.modeling.Model;
 import slp.core.modeling.mix.InverseMixModel;
 import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.JMModel;
+import slp.core.modeling.runners.ModelRunner;
 import slp.core.util.Pair;
 
 public class JavaRunner {
@@ -26,13 +26,13 @@ public class JavaRunner {
 
 		// 1. Lexing
 		//   a. Set up lexer using a JavaLexer
-		LexerRunner.setLexer(new JavaLexer());
+		LexerRunner lexerRunner = new LexerRunner(new JavaLexer());
 		//   b. Do not tokenize per line for Java (invoked for the sake of example; false is the default)
-		LexerRunner.setPerLine(false);
+		lexerRunner.setPerLine(false);
 		//   c. But, do add sentence markers (to start and end of file)
-		LexerRunner.addSentenceMarkers(true);
+		lexerRunner.setSentenceMarkers(true);
 		//   d. Only lex (and thus implicitly, model) files ending with "java". See also 'useRegex'
-		LexerRunner.useExtension("java");
+		lexerRunner.setExtension("java");
 		
 		// 2. Vocabulary:
 		//    - Since we are not modifying the defaults in any way, we'll just let the vocabulary be built while training.
@@ -42,21 +42,21 @@ public class JavaRunner {
 		
 		// 3. Model
 		//    a. No per line modeling for Java (default)
-		ModelRunner.perLine(false);
+		ModelRunner modelRunner = new ModelRunner(lexerRunner);
+		modelRunner.perLine(false);
 		//    b. Self-testing if train is equal to test; will un-count each file before modeling it.
-		ModelRunner.selfTesting(train.equals(test));
-		//    c. Set n-gram model order, 6 works well for Java
-		ModelRunner.setNGramOrder(6);
+		modelRunner.selfTesting(train.equals(test));
+		//    c. Set n-gram model order, 6 works well for Java (and is the default)
 		//    d. Use an n-gram model with simple Jelinek-Mercer smoothing (works well for code)
 		//       - Let's use a GigaCounter, fit for large corpora here as well; the nested model later on will copy this behavior.
-		Model model = new JMModel(new GigaCounter());
+		Model model = new JMModel(6, new GigaCounter());
 		//    e. First, train this model on all files in 'train' recursively, using the usual updating mechanism (same as for dynamic updating).
 		//       - Note that this invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
 		//          other models may prefer to pre-train when calling the Model's constructor.
-		ModelRunner.learn(model, train);
+		modelRunner.learn(model, train);
 		//    f. To get more fancy for source code, we can convert the model into a complex mix model.
 		//       - First wrap in a nested model, causing it to learn all files in test into a new 'local' model
-		model = new NestedModel(test, model);
+		model = new NestedModel(modelRunner, test, model);
 		//       - Then, add an ngram-cache component.
 		//         * Note, order matters! The most local model should be "right-most" so it is called upon last (i.e. "gets the final say")
 		//         * This is also why we apply the cache after the nested model
@@ -66,9 +66,9 @@ public class JavaRunner {
 		
 		// 4. Running
 		//    a. Model each file in 'test' recursively
-		Stream<Pair<File, List<List<Double>>>> modeledFiles = ModelRunner.model(model, test);
+		Stream<Pair<File, List<List<Double>>>> modeledFiles = modelRunner.model(model, test);
 		//    b. Retrieve entropy statistics by mapping the entropies per file
-		DoubleSummaryStatistics statistics = ModelRunner.getStats(modeledFiles);
+		DoubleSummaryStatistics statistics = modelRunner.getStats(modeledFiles);
 		
 		System.out.printf("Modeled %d tokens, average entropy:\t%.4f\n", statistics.getCount(), statistics.getAverage());
 	}

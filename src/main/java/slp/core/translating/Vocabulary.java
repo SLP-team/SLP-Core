@@ -9,8 +9,8 @@ import java.util.stream.Stream;
 
 /**
  * Translation (to integers) is the second step (after Lexing) before any modeling takes place.
- * The vocabulary is global (static) and is open by default; it can be initialized through
- * the {@link VocabularyRunner} class or simply left open to be filled by the modeling code
+ * The this is global (static) and is open by default; it can be initialized through
+ * the {@link thisRunner} class or simply left open to be filled by the modeling code
  * (as has been shown to be more appropriate for modeling source code).
  * <br />
  * <em>Note:</em> the counts in this class are for informative purposes only:
@@ -25,69 +25,67 @@ public class Vocabulary {
 	public static final String BOS = "<s>";
 	public static final String EOS = "</s>";
 	
-	static Map<String, Integer> wordIndices;
-	static List<String> words;
-	static List<Integer> counts;
-	static int size;
+	private Map<String, Integer> wordIndices;
+	private List<String> words;
+	private List<Integer> counts;
+	private int size;
 	
-	private static boolean closed;
-	
-	static { reset(); }
-	
-	private static void addUnk() {
-		wordIndices.put(UNK, 0);
-		words.add(UNK);
-		counts.add(0);
-		size++;
+	public Vocabulary() {
+		this.wordIndices = new HashMap<>();
+		this.words = new ArrayList<>();
+		this.counts = new ArrayList<>();
+		this.closed = false;
+		this.size = 0;
+		addUnk();	
 	}
 	
-	public static void reset() {
-		wordIndices = new HashMap<>();
-		words = new ArrayList<>();
-		counts = new ArrayList<>();
-		closed = false;
-		size = 0;
-		addUnk();
+	private boolean closed;
+
+	private void addUnk() {
+		this.wordIndices.put(UNK, 0);
+		this.words.add(UNK);
+		this.counts.add(0);
+		this.size++;
 	}
 	
-	public static Map<String, Integer> wordIndices() {
+	public Map<String, Integer> wordIndices() {
 		return wordIndices;
 	}
 	
-	public static List<String> words() {
+	public List<String> getWords() {
 		return words;
 	}
 	
-	public static List<Integer> counts() {
+	public List<Integer> getCounts() {
 		return counts;
 	}
 	
-	public static int size() {
+	public int size() {
 		return size;
 	}
 	
 	/**
-	 * To be determined if this is a good solution to false vocabulary inflation
+	 * To be determined if this is a good solution to false this inflation
 	 * @param offset
 	 */
-	public static void adjustSize(int offset) {
+	public void adjustSize(int offset) {
 		size += offset;
 	}
 	
-	public static void close() {
+	public void close() {
 		closed = true;
 	}
 
-	public static void open() {
+	public void open() {
 		closed = false;
 	}
 	
-	private static int checkPoint;
-	public static void setCheckpoint() {
+	private int checkPoint;
+	public void setCheckpoint() {
 		checkPoint = words.size();
 	}
 	
-	public static void restoreCheckpoint() {
+	public void restoreCheckpoint() {
 		for (int i = words.size(); i > checkPoint; i--) {
 			counts.remove(counts.size() - 1);
 			String word = words.remove(words.size() - 1);
@@ -96,7 +94,7 @@ public class Vocabulary {
 		}
 	}
 	
-	static void store(String token, int count) {
+	void store(String token, int count) {
 		Integer index = wordIndices.get(token);
 		if (index == null) {
 			index = wordIndices.size();
@@ -110,15 +108,15 @@ public class Vocabulary {
 		}
 	}
 	
-	public static Stream<Integer> toIndices(Stream<String> tokens) {
-		return tokens.map(Vocabulary::toIndex);
+	public Stream<Integer> toIndices(Stream<String> tokens) {
+		return tokens.map(this::toIndex);
 	}
 
-	public static List<Integer> toIndices(List<String> tokens) {
-		return tokens.stream().map(Vocabulary::toIndex).collect(Collectors.toList());
+	public List<Integer> toIndices(List<String> tokens) {
+		return tokens.stream().map(this::toIndex).collect(Collectors.toList());
 	}
 
-	public static Integer toIndex(String token) {
+	public Integer toIndex(String token) {
 		Integer index = wordIndices.get(token);
 		if (index == null) {
 			if (closed) {
@@ -135,7 +133,7 @@ public class Vocabulary {
 		return index;
 	}
 	
-	public static Integer getCount(String token) {
+	public Integer getCount(String token) {
 		Integer index = wordIndices.get(token);
 		if (index != null) {
 			return getCount(index);
@@ -143,19 +141,19 @@ public class Vocabulary {
 		return 0;
 	}
 
-	private static Integer getCount(Integer index) {
+	private Integer getCount(Integer index) {
 		return counts.get(index);
 	}
 
-	public static Stream<String> toWords(Stream<Integer> indices) {
-		return indices.map(Vocabulary::toWord);
+	public Stream<String> toWords(Stream<Integer> indices) {
+		return indices.map(this::toWord);
 	}
 
-	public static List<String> toWords(List<Integer> indices) {
-		return indices.stream().map(Vocabulary::toWord).collect(Collectors.toList());
+	public List<String> toWords(List<Integer> indices) {
+		return indices.stream().map(this::toWord).collect(Collectors.toList());
 	}
 		
-	public static String toWord(Integer index) {
+	public String toWord(Integer index) {
 		return words.get(index);
 	}
 }

@@ -7,8 +7,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import slp.core.modeling.mix.MixModel;
-import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.NGramModel;
+import slp.core.modeling.runners.ModelRunner;
 import slp.core.util.Pair;
 
 /**
@@ -79,7 +79,7 @@ public interface Model {
 	 * Any invoking code should note the risk of the underlying model not implementing this!
 	 * For instance when self-testing, this may lead to testing on train-data.
 	 * <br />
-	 * See {@link NestedModel} for a good example, which uses this functionality to train on all-but the test file.
+	 * See {@link NestedModelRunner} for a good example, which uses this functionality to train on all-but the test file.
 	 * It currently uses only {@link NGramModel}s which are capable of un-learning input.
 	 * 
 	 * @see {@link #forgetToken(List, int)}, {@link #learn(List)}

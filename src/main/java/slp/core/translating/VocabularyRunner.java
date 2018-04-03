@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import slp.core.io.Reader;
 import slp.core.lexing.LexerRunner;
@@ -52,50 +51,48 @@ public class VocabularyRunner {
 	
 	/**
 	 * Build vocabulary on all files reachable from (constructor) provided root, 
-	 * possibly filtering by name/extension (see {@link #useRegex(String)}/{@link #useExtension(String)}).
+	 * possibly filtering by name/extension (see {@link #setRegex(String)}/{@link #setExtension(String)}).
 	 * @return 
 	 */
-	public static void build(File root) {
+	public static Vocabulary build(LexerRunner lexerRunner, File root) {
+		Vocabulary vocabulary = new Vocabulary();
 		try {
 			int[] c = { 0 };
-			Stream<String> tokens = Files.walk(root.toPath())
+			Map<String, Integer> counts = new HashMap<>();
+			Files.walk(root.toPath())
 					.map(Path::toFile)
 					.filter(File::isFile)
-					.flatMap(LexerRunner::lex)
+					.flatMap(lexerRunner::lex)
 					.flatMap(l -> l)
 					.peek(w -> {
 						if (++c[0] % PRINT_FREQ == 0) {
 							System.out.printf("Building vocabulary: tokens processed: %dM, size: %dK\n",
-									Math.round(c[0]/PRINT_FREQ), Math.round(Vocabulary.size()/1e3));
+									Math.round(c[0]/PRINT_FREQ), Math.round(vocabulary.size()/1e3));
 						}
-					});
-			build(tokens);
-			if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + Vocabulary.size());
+					})
+					.forEach(t -> counts.merge(t, 1, Integer::sum));
+			List<Entry<String, Integer>> ordered = counts.entrySet().stream()
+				.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
+				.collect(Collectors.toList());
+			int unkCount = 0;
+			for (Entry<String, Integer> entry : ordered) {
+				String token = entry.getKey();
+				int count = entry.getValue();
+				if (count < cutOff) {
+					unkCount += count;
+				}
+				else {
+					vocabulary.store(token, count);
+				}
+			}
+			vocabulary.store(Vocabulary.UNK, vocabulary.getCount(Vocabulary.UNK) + unkCount);
+			if (close) vocabulary.close();
+			if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + vocabulary.size());
+			return vocabulary;
 		} catch (IOException e) {
 			e.printStackTrace();
+			return null;
 		}
-	}
-	
-	public static void build(Stream<String> tokens) {
-		Map<String, Integer> counts = new HashMap<>();
-		tokens.forEach(t -> counts.merge(t, 1, Integer::sum));
-		Vocabulary.reset();
-		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
-			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
-			.collect(Collectors.toList());
-		int unkCount = 0;
-		for (Entry<String, Integer> entry : ordered) {
-			String token = entry.getKey();
-			int count = entry.getValue();
-			if (count < cutOff) {
-				unkCount += count;
-			}
-			else {
-				Vocabulary.store(token, count);
-			}
-		}
-		Vocabulary.store(Vocabulary.UNK, Vocabulary.getCount(Vocabulary.UNK) + unkCount);
-		if (close) Vocabulary.close();
 	}
 	
 	/**
@@ -103,22 +100,24 @@ public class VocabularyRunner {
 	 * tab-separated, having three columns per line: count, index and token (which may contain tabs))
 	 * <br /><em>Note:</em>: index is assumed to be strictly incremental starting at 0!
 	 * @return 
+	 * @return 
 	 */
-	public static void read(File file) {
-		Vocabulary.reset();
+	public static Vocabulary read(File file) {
+		Vocabulary vocabulary = new Vocabulary();
 		Reader.readLines(file).stream()
 			.map(x -> x.split("\t", 3))
 			.filter(x -> Integer.parseInt(x[0]) >= cutOff)
 			.forEachOrdered(split -> {
 				Integer count = Integer.parseInt(split[0]);
 				Integer index = Integer.parseInt(split[1]);
-				if (index > 0 && index != Vocabulary.size) {
+				if (index > 0 && index != vocabulary.size()) {
 					System.out.println("VocabularyRunner.read(): non-consecutive indices while reading vocabulary!");
 				}
 				String token = split[2];
-				Vocabulary.store(token, count);
+				vocabulary.store(token, count);
 			});
-		if (close) Vocabulary.close();
+		if (close) vocabulary.close();
+		return vocabulary;
 	}
 
 	/**
@@ -128,11 +127,11 @@ public class VocabularyRunner {
 	 * 
 	 * @param file File to write vocabulary to.
 	 */
-	public static void write(File file) {
+	public static void write(Vocabulary vocabulary, File file) {
 		try (BufferedWriter fw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8))) {
-			for (int i = 0; i < Vocabulary.size(); i++) {
-				Integer count = Vocabulary.counts.get(i);
-				String word = Vocabulary.words.get(i);
+			for (int i = 0; i < vocabulary.size(); i++) {
+				Integer count = vocabulary.getCounts().get(i);
+				String word = vocabulary.getWords().get(i);
 				fw.append(count + "\t" + i + "\t" + word.toString() + "\n");
 			}
 		} catch (IOException e) {

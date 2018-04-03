@@ -11,33 +11,44 @@ import slp.core.lexing.simple.PunctuationLexer;
 import slp.core.translating.Vocabulary;
 
 /**
- * The LexerRunner is the starting point of any modeling code,
+ * The this is the starting point of any modeling code,
  * since any input should be lexed first and many models need access to lexing even at test time.
- * This class can be configured statically and exposes static lexing methods that are used by each model.
+ * This class can be configured statically and exposes lexing methods that are used by each model.
  * 
  * @author Vincent Hellendoorn
  *
  */
 public class LexerRunner {
 	
-	private static Lexer lexer = new PunctuationLexer();
-	private static boolean translate = false;
-	private static boolean perLine = false;
-	private static boolean sentenceMarkers = false;
-	private static String regex = ".*";
+	private final Lexer lexer;
+	private final Vocabulary vocabulary;
 	
-	/**
-	 * Specify lexer to be used for tokenizing. Default: {@link PunctuationLexer}.
-	 * @param lexer The lexer to lex the input with
-	 */
-	public static void setLexer(Lexer lexer) {
-		LexerRunner.lexer = lexer;
+	private boolean perLine = false;
+	private boolean sentenceMarkers = false;
+	private String regex = ".*";
+	private boolean translate = false;
+
+	public LexerRunner() {
+		this(new PunctuationLexer());
+	}
+
+	public LexerRunner(Lexer lexer) {
+		this(lexer, new Vocabulary());
+	}
+
+	public LexerRunner(Lexer lexer, Vocabulary vocabulary) {
+		this.lexer = lexer;
+		this.vocabulary = vocabulary;
+	}
+	
+	public Vocabulary getVocabulary() {
+		return this.vocabulary;
 	}
 	
 	/**
 	 * Returns the lexer currently used by this class
 	 */
-	public static Lexer getLexer() {
+	public Lexer getLexer() {
 		return lexer;
 	}
 
@@ -50,15 +61,15 @@ public class LexerRunner {
 	 * Default: false, which assumes these have already been added.
 	 * @return
 	 */
-	public static void addSentenceMarkers(boolean useDelimiters) {
-		LexerRunner.sentenceMarkers = useDelimiters;
+	public void setSentenceMarkers(boolean useDelimiters) {
+		this.sentenceMarkers = useDelimiters;
 	}
 	
 	/**
 	 * Returns whether or not file/line (depending on {@code perLine}) sentence markers are added.
 	 */
-	public static boolean addsSentenceMarkers() {
-		return LexerRunner.sentenceMarkers;
+	public boolean hasSentenceMarkers() {
+		return this.sentenceMarkers;
 	}
 	
 	/**
@@ -68,52 +79,52 @@ public class LexerRunner {
 	 * <br />
 	 * Default: set to false.
 	 */
-	public static void setPerLine(boolean perLine) {
-		LexerRunner.perLine = perLine;
+	public void setPerLine(boolean perLine) {
+		this.perLine = perLine;
 	}
 	
 	/**
 	 * Returns whether lexing adds delimiters per line.
 	 */
-	public static boolean isPerLine() {
-		return LexerRunner.perLine;
+	public boolean isPerLine() {
+		return this.perLine;
 	}
 
+	/**
+	 * Specify regex for file extensions to be kept.
+	 * <br />
+	 * <em>Note:</em> to just specify the extension, use the more convenient {@link #setExtension(String)}.
+	 * @param regex Regular expression to match file name against. E.g. ".*\\.(c|h)" for C source and header files.
+	 */
+	public void setRegex(String regex) {
+		this.regex = regex;
+	}
+	
+	/**
+	 * Alternative to {@link #setRegex(String)} that allows you to specify just the extension.
+	 * <br />
+	 * <em>Note:</em> this prepends <code>.*\\.</code> to the provided regex!
+	 * @param regex Regular expression to match against extension of files. E.g. "(c|h)" for C source and header files.
+	 */
+	public void setExtension(String regex) {
+		this.regex = ".*\\." + regex;
+	}
+	
+	/**
+	 * Returns the regex currently used to filter input files to lex.
+	 */
+	public String getRegex() {
+		return this.regex;
+	}
+	
 	/**
 	 * Convenience method that translates tokens to indices after lexing before writing to file (default: no translation).
 	 * <br />
 	 * <em>Note:</em> you should either initialize the vocabulary yourself or write it to file afterwards
 	 * (as {@link slp.core.CLI} does) or the resulting indices are (mostly) meaningless.
 	 */
-	public static void preTranslate(boolean preTranslate) {
-		LexerRunner.translate = preTranslate;
-	}
-	
-	/**
-	 * Specify regex for file extensions to be kept.
-	 * <br />
-	 * <em>Note:</em> to just specify the extension, use the more convenient {@link #useExtension(String)}.
-	 * @param regex Regular expression to match file name against. E.g. ".*\\.(c|h)" for C source and header files.
-	 */
-	public static void useRegex(String regex) {
-		LexerRunner.regex = regex;
-	}
-	
-	/**
-	 * Alternative to {@link #useRegex(String)} that allows you to specify just the extension.
-	 * <br />
-	 * <em>Note:</em> this prepends <code>.*\\.</code> to the provided regex!
-	 * @param regex Regular expression to match against extension of files. E.g. "(c|h)" for C source and header files.
-	 */
-	public static void useExtension(String regex) {
-		LexerRunner.regex = ".*\\." + regex;
-	}
-	
-	/**
-	 * Returns the regex currently used to filter input files to lex.
-	 */
-	public static String getRegex() {
-		return LexerRunner.regex;
+	public void setPreTranslate(boolean preTranslate) {
+		this.translate = preTranslate;
 	}
 	
 	/**
@@ -122,7 +133,7 @@ public class LexerRunner {
 	 * @param from Source file/directory to be lexed
 	 * @param to Target file/directory to be created with lexed (optionally translated) content from source
 	 */
-	public static void lexDirectory(File from, File to) {
+	public void lexDirectory(File from, File to) {
 		int[] count = { 0 };
 		try {
 			Files.walk(from.toPath())
@@ -154,12 +165,22 @@ public class LexerRunner {
 	 * since knowing the file location/context can be for most lexers!
 	 * <br />
 	 * <em>Note:</em> returns empty stream if the file does not match this builder's regex
-	 * (which accepts everything unless set otherwise in {@link #useRegex(String)}).
+	 * (which accepts everything unless set otherwise in {@link #setRegex(String)}).
 	 * @param file File to lex
 	 */
-	public static Stream<Stream<String>> lex(File file) {
-		if (!file.getName().matches(regex)) return Stream.empty();
-		return lexTokens(lexer.lex(file));
+	public Stream<Stream<String>> lex(File file) {
+		if (!file.getName().matches(this.regex)) return Stream.empty();
+		return lexTokens(this.lexer.lex(file));
+	}
+
+	/**
+	 * Lex the provided text to a stream of tokens per line.
+	 * <b>Note:</b> if possible, use lex(File) instead! Knowing the file location/context can benefit e.g. AST lexers.
+	 *
+	 * @param content Textual content to lex
+	 */
+	public Stream<Stream<String>> lex(String content) {
+		return lexTokens(this.lexer.lex(content));
 	}
 	
 	/**
@@ -169,20 +190,20 @@ public class LexerRunner {
 	 * @param lines Lines to lex
 	 * @return A Stream of lines containing a Stream of tokens each
 	 */
-	public static Stream<Stream<String>> lex(Stream<String> lines) {
-		return lexTokens(lexer.lex(lines));
+	public Stream<Stream<String>> lex(Stream<String> lines) {
+		return lexTokens(this.lexer.lex(lines));
 	}
 
-	private static Stream<Stream<String>> lexTokens(Stream<Stream<String>> tokens) {
+	private Stream<Stream<String>> lexTokens(Stream<Stream<String>> tokens) {
 		Stream<Stream<String>> lexed = tokens
-				.map(l -> l.map(Vocabulary::toIndex))
-				.map(l -> l.map(t -> translate ? t+"" : Vocabulary.toWord(t)));
-		if (sentenceMarkers) return withDelimiters(lexed);
+				.map(this.vocabulary::toIndices)
+				.map(l -> l.map(t -> this.translate ? t+"" : this.vocabulary.toWord(t)));
+		if (this.sentenceMarkers) return withDelimiters(lexed);
 		else return lexed;
 	}
 
-	private static Stream<Stream<String>> withDelimiters(Stream<Stream<String>> lexed) {
-		if (perLine) {
+	private Stream<Stream<String>> withDelimiters(Stream<Stream<String>> lexed) {
+		if (this.perLine) {
 			return lexed.map(l -> Stream.concat(Stream.of(Vocabulary.BOS), Stream.concat(l, Stream.of(Vocabulary.EOS))));
 		}
 		else {

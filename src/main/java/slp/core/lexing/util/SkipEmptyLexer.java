@@ -5,15 +5,10 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import slp.core.lexing.Lexer;
-import slp.core.lexing.LexerRunner;
 
 public class SkipEmptyLexer implements Lexer {
 	
 	private Lexer lexer;
-
-	public SkipEmptyLexer() {
-		this(LexerRunner.getLexer());
-	}
 	
 	public SkipEmptyLexer(Lexer lexer) {
 		this.lexer = lexer;

@@ -11,19 +11,29 @@ import java.util.stream.Collectors;
 import slp.core.counting.Counter;
 import slp.core.counting.trie.MapTrieCounter;
 import slp.core.modeling.AbstractModel;
-import slp.core.modeling.ModelRunner;
+import slp.core.modeling.runners.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
 
 public abstract class NGramModel extends AbstractModel {
 	
+	protected final int order;
 	public Counter counter;
 
 	public NGramModel() {
-		this(new MapTrieCounter());
+		this(ModelRunner.DEFAULT_NGRAM_ORDER);
 	}
 	
 	public NGramModel(Counter counter) {
+		this(ModelRunner.DEFAULT_NGRAM_ORDER, counter);
+	}
+
+	public NGramModel(int order) {
+		this(order, new MapTrieCounter());
+	}
+	
+	public NGramModel(int order, Counter counter) {
+		this.order = order;
 		this.counter = counter;
 	}
 
@@ -36,12 +46,12 @@ public abstract class NGramModel extends AbstractModel {
 
 	@Override
 	public void learn(List<Integer> input) {
-		this.counter.countBatch(NGramSequencer.sequenceForward(input));
+		this.counter.countBatch(NGramSequencer.sequenceForward(input, this.order));
 	}
 	
 	@Override
 	public void learnToken(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
+		List<Integer> sequence = NGramSequencer.sequenceAt(input, index, this.order);
 		for (int i = 0; i < sequence.size(); i++) {
 			this.counter.count(sequence.subList(i, sequence.size()));
 		}
@@ -49,12 +59,12 @@ public abstract class NGramModel extends AbstractModel {
 	
 	@Override
 	public void forget(List<Integer> input) {
-		this.counter.unCountBatch(NGramSequencer.sequenceForward(input));
+		this.counter.unCountBatch(NGramSequencer.sequenceForward(input, this.order));
 	}
 	
 	@Override
 	public void forgetToken(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
+		List<Integer> sequence = NGramSequencer.sequenceAt(input, index, this.order);
 		for (int i = 0; i < sequence.size(); i++) {
 			this.counter.unCount(sequence.subList(i, sequence.size()));
 		}
@@ -62,7 +72,7 @@ public abstract class NGramModel extends AbstractModel {
 
 	@Override
 	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index);
+		List<Integer> sequence = NGramSequencer.sequenceAt(input, index, this.order);
 		double probability = 0.0;
 		double mass = 0.0;
 		int hits = 0;
@@ -87,10 +97,10 @@ public abstract class NGramModel extends AbstractModel {
 
 	@Override
 	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
-		List<Integer> sequence = NGramSequencer.sequenceAt(input, index - 1);
+		List<Integer> sequence = NGramSequencer.sequenceAt(input, index - 1, this.order);
 		Set<Integer> predictions = new HashSet<>();
 		for (int i = 0; i <= sequence.size(); i++) {
-			int limit = ModelRunner.getPredictionCutoff() - predictions.size();
+			int limit = ModelRunner.GLOBAL_PREDICTION_CUTOFF - predictions.size();
 			if (limit <= 0) break;
 			predictions.addAll(this.counter.getTopSuccessors(sequence.subList(i, sequence.size()), limit));
 		}

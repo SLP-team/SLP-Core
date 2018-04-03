@@ -32,7 +32,6 @@ public class IntsCreator {
 		File testOut = new File(root, "ix-test");
 		File validOut = new File(root, "ix-valid");
 		
-		LexerRunner.setLexer(new JavaLexer());
 		VocabularyRunner.read(new File("vocab.out"));
 		
 		writeIXs(trainDir, trainOut);
@@ -41,11 +40,13 @@ public class IntsCreator {
 	}
 
 	private static void writeIXs(File dir, File out) throws IOException {
+		LexerRunner lexerRunner = new LexerRunner(new JavaLexer());
+		Vocabulary vocabulary = new Vocabulary();
 		try (FileWriter fw = new FileWriter(out)) {
 			List<File> files = Util.getFiles(dir);
 			for (File file : files) {
-				List<String> tokens = LexerRunner.lex(file)
-						.flatMap(Vocabulary::toIndices)
+				List<String> tokens = lexerRunner.lex(file)
+						.flatMap(vocabulary::toIndices)
 						.map(ix -> "" + ix)
 						.collect(Collectors.toList());
 				while (tokens.size() > 1.1*LINE_CUTOFF) {

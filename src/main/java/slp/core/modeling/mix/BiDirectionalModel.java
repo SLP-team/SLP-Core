@@ -7,9 +7,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import slp.core.lexing.Lexer;
-import slp.core.lexing.LexerRunner;
-import slp.core.lexing.util.ReverseLexer;
 import slp.core.modeling.Model;
 import slp.core.util.Pair;
 
@@ -39,22 +36,14 @@ public class BiDirectionalModel extends MixModel {
 	}
 
 	private List<Integer> getReverse(List<Integer> input) {
-		// A reverse lexer is set and un-set by notify and may thus already be available
-		// If it is not set, explicitly reverse the input
-		if (!(LexerRunner.getLexer() instanceof ReverseLexer)) {
-			return IntStream.range(0, input.size())
-					.mapToObj(i -> input.get(input.size() - i - 1))
-					.collect(Collectors.toList());
-		}
-		return input;
+		return IntStream.range(0, input.size())
+				.mapToObj(i -> input.get(input.size() - i - 1))
+				.collect(Collectors.toList());
 	}
 
 	@Override
 	protected void notifyRight(File next) {
-		Lexer lexer = LexerRunner.getLexer();
-		LexerRunner.setLexer(new ReverseLexer(lexer));
 		this.right.notify(next);
-		LexerRunner.setLexer(lexer);
 	}
 	
 	@Override

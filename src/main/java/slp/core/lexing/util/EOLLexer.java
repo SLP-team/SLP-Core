@@ -6,16 +6,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.lexing.Lexer;
-import slp.core.lexing.LexerRunner;
 import slp.core.translating.Vocabulary;
 
 public class EOLLexer implements Lexer {
 	
 	private Lexer lexer;
-
-	public EOLLexer() {
-		this(LexerRunner.getLexer());
-	}
 	
 	public EOLLexer(Lexer lexer) {
 		this.lexer = lexer;

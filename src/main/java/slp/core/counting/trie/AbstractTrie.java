@@ -7,17 +7,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import slp.core.counting.Counter;
-import slp.core.modeling.ModelRunner;
-import slp.core.translating.Vocabulary;
+import slp.core.modeling.runners.ModelRunner;
 
 public abstract class AbstractTrie implements Counter {
 
 	
 	public static int COUNT_OF_COUNTS_CUTOFF = 3;
-	public volatile static int[][] nCounts = new int[ModelRunner.getNGramOrder()][4];
+	public volatile static int[][] nCounts = new int[ModelRunner.DEFAULT_NGRAM_ORDER][4];
 	
 	int[] counts;
 
@@ -287,9 +285,7 @@ public abstract class AbstractTrie implements Counter {
 
 	private void addArray(List<Integer> indices, int index, int adj) {
 		if (adj < 0) {
-			System.out.println("Attempting to forget unknown event: "
-					+ indices.subList(index, indices.size()) + " == "
-					+ indices.subList(index, indices.size()).stream().map(Vocabulary::toWord).collect(Collectors.toList()));
+			System.out.println("Attempting to forget unknown event: " + indices.subList(index, indices.size()));
 			return;
 		}
 		int[] singleton = new int[indices.size() - index];

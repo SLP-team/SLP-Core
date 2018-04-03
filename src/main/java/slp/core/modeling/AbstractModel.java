@@ -44,6 +44,17 @@ public abstract class AbstractModel implements Model {
 			this.dynamic = true;
 		}
 	}
+	
+	@Override
+	public double getConfidence(List<Integer> input, int index) {
+		this.pauseDynamic();
+		double confidence = this.predictAtIndex(input, index).entrySet().stream()
+			.map(e -> e.getValue().left)
+			.sorted((p1, p2) -> -Double.compare(p1, p2))
+			.mapToDouble(d -> d).limit(1).sum();
+		this.unPauseDynamic();
+		return confidence;
+	}
 
 	/**
 	 * Default implementation of {@link #modelToken(List, int)},

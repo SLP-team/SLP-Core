@@ -23,15 +23,14 @@ import slp.core.lexing.simple.TokenizedLexer;
 import slp.core.lexing.simple.WhitespaceLexer;
 import slp.core.modeling.CacheModel;
 import slp.core.modeling.Model;
-import slp.core.modeling.ModelRunner;
-import slp.core.modeling.mix.NestedModel;
-import slp.core.modeling.mix.ProportionalMixModel;
 import slp.core.modeling.mix.InverseMixModel;
+import slp.core.modeling.mix.NestedModel;
 import slp.core.modeling.ngram.ADMModel;
 import slp.core.modeling.ngram.ADModel;
 import slp.core.modeling.ngram.JMModel;
 import slp.core.modeling.ngram.NGramModel;
 import slp.core.modeling.ngram.WBModel;
+import slp.core.modeling.runners.ModelRunner;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
 import slp.core.util.Pair;
@@ -78,17 +77,25 @@ public class CLI {
 	private static String[] arguments;
 	private static String mode;
 	
+	private static LexerRunner lexerRunner;
+	private static Vocabulary vocabulary;
+	private static ModelRunner modelRunner;
+	
 	public static FileWriter logger;
 	
 	public static void main(String[] args) {
+		args = new String[]	{
+			"train-test", "-tr", "D:/Data/Code/FSE/Train/AccelService", "-te", "D:/Data/Code/FSE/Test/AndProject",
+			"-l", "java", "--giga", "-c", "-n"
+		};
 		arguments = args;
 		if (arguments.length == 0 || isSet(HELP)) {
 			if (arguments.length == 0) System.out.println("No arguments provided, printing help menu.");
 			printHelp();
 			return;
 		}
-		setupLexerRunner();
 		setupVocabulary();
+		setupLexerRunner();
 		setupModelRunner();
 		setupLogger();
 		mode = arguments[0];
@@ -182,29 +189,46 @@ public class CLI {
 		System.out.println();
 	}
 
-	private static void setupLexerRunner() {
-		LexerRunner.setLexer(getLexer());
-		if (isSet(PER_LINE)) LexerRunner.setPerLine(true);
-		if (isSet(ADD_DELIMS)) LexerRunner.addSentenceMarkers(true);
-		if (isSet(EXTENSION)) LexerRunner.useExtension(getArg(EXTENSION));
-	}
-
 	private static void setupVocabulary() {
 		if (isSet(VOCABULARY)) {
 			String file = getArg(VOCABULARY);
-			if (file == null || file.isEmpty() || !new File(file).exists()) return;
+			if (file == null || file.isEmpty() || !new File(file).exists()) {
+				System.err.println("Vocabulary file not found: " + file);
+				System.exit(1);
+			}
 			if (isSet(CLOSED)) VocabularyRunner.close(true);
 			if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
 			System.out.println("Retrieving vocabulary from file");
-			VocabularyRunner.read(new File(file));
+			vocabulary = VocabularyRunner.read(new File(file));
 		}
-		if (isSet(CLOSED)) Vocabulary.close();
+		else vocabulary = new Vocabulary();
+		if (isSet(CLOSED)) vocabulary.close();
+	}
+
+	private static void setupLexerRunner() {
+		lexerRunner = new LexerRunner(getLexer(), vocabulary);
+		if (isSet(PER_LINE)) lexerRunner.setPerLine(true);
+		if (isSet(ADD_DELIMS)) lexerRunner.setSentenceMarkers(true);
+		if (isSet(EXTENSION)) lexerRunner.setExtension(getArg(EXTENSION));
 	}
 
 	private static void setupModelRunner() {
-		if (isSet(PER_LINE)) ModelRunner.perLine(true);
-		if (isSelf()) ModelRunner.selfTesting(true);
-		if (isSet(ORDER)) ModelRunner.setNGramOrder(Integer.parseInt(getArg(ORDER)));
+		modelRunner = new ModelRunner(lexerRunner);
+		if (isSet(PER_LINE)) modelRunner.perLine(true);
+		if (isSelf()) modelRunner.selfTesting(true);
+	}
+
+	private static Lexer getLexer() {
+		String language = getArg(LANGUAGE);
+		Lexer lexer;
+		if (language == null || language.toLowerCase().equals("simple")) lexer = new PunctuationLexer();
+		else if (language.toLowerCase().equals("java")) lexer = new JavaLexer();
+		else if (language.toLowerCase().equals("tokens")) lexer = new TokenizedLexer();
+		else if (language.toLowerCase().equals("blank")) lexer = new WhitespaceLexer();
+		else if (language.toLowerCase().equals("char")) lexer = new CharacterLexer();
+		else lexer = new PunctuationLexer();
+		System.out.println("Using lexer " + lexer.getClass().getSimpleName());
+		return lexer;
 	}
 
 	private static void setupLogger() {
@@ -226,17 +250,25 @@ public class CLI {
 		}
 	}
 
-	private static Lexer getLexer() {
-		String language = getArg(LANGUAGE);
-		Lexer lexer;
-		if (language == null || language.toLowerCase().equals("simple")) lexer = new PunctuationLexer();
-		else if (language.toLowerCase().equals("java")) lexer = new JavaLexer();
-		else if (language.toLowerCase().equals("tokens")) lexer = new TokenizedLexer();
-		else if (language.toLowerCase().equals("blank")) lexer = new WhitespaceLexer();
-		else if (language.toLowerCase().equals("char")) lexer = new CharacterLexer();
-		else lexer = new PunctuationLexer();
-		System.out.println("Using lexer " + lexer.getClass().getSimpleName());
-		return lexer;
+	private static Model getModel() {
+		return wrapModel(getNGramModel());
+	}
+
+	private static NGramModel getNGramModel() {
+		Counter counter = getCounter();
+		int order = isSet(ORDER) ? Integer.parseInt(getArg(ORDER)) : ModelRunner.DEFAULT_NGRAM_ORDER;
+		String modelName = getArg(MODEL);
+		NGramModel model;
+		if (modelName == null) model = new JMModel(order, counter);
+		else if (modelName.toLowerCase().equals("jm")) model = new JMModel(order, counter);
+		else if (modelName.toLowerCase().equals("wb")) model = new WBModel(order, counter);
+		else if (modelName.toLowerCase().equals("ad")) model = new ADModel(order, counter);
+		else if (modelName.toLowerCase().equals("adm")) model = new ADMModel(order, counter);
+		else model = new JMModel(order, counter);
+		NGramModel.setStandard(model.getClass());
+		// This will speed up and reduce memory of trie counting for the simplest classes of models
+		if (model instanceof JMModel || model instanceof WBModel) AbstractTrie.COUNT_OF_COUNTS_CUTOFF = 1;
+		return model;
 	}
 
 	private static Counter getCounter() {
@@ -246,7 +278,7 @@ public class CLI {
 		else {
 			if (!isSet(COUNTER) || !new File(getArg(COUNTER)).exists()) {
 				System.out.println("No (valid) counter file given for test/predict mode! Specify one with --counter *path-to-counter*");
-				return null;
+				System.exit(1);
 			}
 			else {
 				long t = System.currentTimeMillis();
@@ -256,25 +288,7 @@ public class CLI {
 				return counter;
 			}
 		}
-	}
-
-	private static Model getModel() {
-		return wrapModel(getNGramModel());
-	}
-
-	private static NGramModel getNGramModel() {
-		Counter counter = getCounter();
-		String modelName = getArg(MODEL);
-		NGramModel model;
-		if (modelName == null) model = new JMModel(counter);
-		else if (modelName.toLowerCase().equals("jm")) model = new JMModel(counter);
-		else if (modelName.toLowerCase().equals("wb")) model = new WBModel(counter);
-		else if (modelName.toLowerCase().equals("ad")) model = new ADModel(counter);
-		else if (modelName.toLowerCase().equals("adm")) model = new ADMModel(counter);
-		else model = new JMModel(counter);
-		NGramModel.setStandard(model.getClass());
-		if (model instanceof JMModel || model instanceof WBModel) AbstractTrie.COUNT_OF_COUNTS_CUTOFF = 1;
-		return model;
+		return null;
 	}
 
 	private static Model wrapModel(Model m) {
@@ -282,10 +296,10 @@ public class CLI {
 			// When loading counter from file, nested self-testing should use 'm' as a local model instead with an empty global model.
 			// And since nested models take care of uncounting, we should 'turn off' self-testing now.
 			if (isSelf() && !isSet(TRAIN)) {
-				ModelRunner.selfTesting(false);
-				m = new NestedModel(new File(getArg(TEST)), NGramModel.standard(), m);
+				modelRunner.selfTesting(false);
+				m = new NestedModel(modelRunner, new File(getArg(TEST)), NGramModel.standard(), m);
 			} else {
-				m = new NestedModel(new File(getArg(TEST)), m);
+				m = new NestedModel(modelRunner, new File(getArg(TEST)), m);
 			}
 		}
 		if (isSet(CACHE)) m = new InverseMixModel(m, new CacheModel());
@@ -301,12 +315,12 @@ public class CLI {
 		if (arguments.length >= 3) {
 			File inDir = new File(arguments[1]);
 			File outDir = new File(arguments[2]);
-			LexerRunner.preTranslate(translate);
-			boolean emptyVocab = Vocabulary.size() <= 1;
-			LexerRunner.lexDirectory(inDir, outDir);
+			lexerRunner.setPreTranslate(translate);
+			boolean emptyVocab = vocabulary.size() <= 1;
+			lexerRunner.lexDirectory(inDir, outDir);//TODO
 			if (translate && emptyVocab) {
 				File vocabFile = isSet(VOCABULARY) ? new File(getArg(VOCABULARY)) : new File(outDir.getParentFile(), "train.vocab");
-				VocabularyRunner.write(vocabFile);
+				VocabularyRunner.write(vocabulary, vocabFile);
 			}
 		}
 		else {
@@ -324,8 +338,8 @@ public class CLI {
 				return;
 			}
 			if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
-			VocabularyRunner.build(inDir);
-			VocabularyRunner.write(outFile);
+			VocabularyRunner.build(lexerRunner, inDir);
+			VocabularyRunner.write(vocabulary, outFile);
 		}
 		else {
 			System.err.println("Not enough arguments given."
@@ -341,9 +355,9 @@ public class CLI {
 				System.err.println("Source path for training does not exist: " + inDir);
 				return;
 			}
-			boolean emptyVocab = Vocabulary.size() <= 1;
+			boolean emptyVocab = vocabulary.size() <= 1;
 			NGramModel model = getNGramModel();
-			ModelRunner.learn(model, inDir);
+			modelRunner.learn(model, inDir);
 			// Since this is for training n-grams only, override ModelRunner's model for easy access to the counter
 			Counter counter = model.getCounter();
 			// Force GigaCounter.resolve() (if applicable), just for accurate timings below
@@ -355,7 +369,7 @@ public class CLI {
 			if (emptyVocab) {
 				System.out.println("Writing vocabulary to file");
 				File vocabFile = isSet(VOCABULARY) ? new File(getArg(VOCABULARY)) : new File(outFile.getParentFile(), "train.vocab");
-				VocabularyRunner.write(vocabFile);
+				VocabularyRunner.write(vocabulary, vocabFile);
 				System.out.println("Vocabulary written");
 			}
 		}
@@ -372,9 +386,11 @@ public class CLI {
 				System.err.println("Test path does not exist: " + inDir);
 			}
 			else {
-				Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(getModel(), inDir);
+				Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.model(getModel(), inDir);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = modelRunner.getStats(
+						fileProbs.peek(f -> Writer.writeEntropies(lexerRunner, f))
+						.peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -399,12 +415,14 @@ public class CLI {
 			}
 			NGramModel nGramModel = getNGramModel();
 			// If self-testing a nested model, simply don't train at all. Do disable 'self' so the ModelRunner won't untrain either.
-			if (isSelf() && isSet(NESTED)) ModelRunner.selfTesting(false);
-			else ModelRunner.learn(nGramModel, trainDir);
+			if (isSelf() && isSet(NESTED)) modelRunner.selfTesting(false);
+			else modelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Stream<Pair<File, List<List<Double>>>> fileProbs = ModelRunner.model(model, testDir);
+			Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.model(model, testDir);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileProbs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = modelRunner.getStats(
+					fileProbs.peek(f -> Writer.writeEntropies(lexerRunner, f))
+					.peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average entropy:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}
@@ -424,9 +442,11 @@ public class CLI {
 				System.err.println("Counter file to read in not found: " + inDir);
 			}
 			else {
-				Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(getModel(), inDir);
+				Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predict(getModel(), inDir);
 				int[] fileCount = { 0 };
-				DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
+				DoubleSummaryStatistics stats = modelRunner.getStats(
+						fileMRRs.peek(f -> Writer.writeEntropies(lexerRunner, f))
+						.peek(f -> fileCount[0]++));
 				System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 						fileCount[0], stats.getCount(), stats.getAverage());
 			}
@@ -451,12 +471,14 @@ public class CLI {
 			}
 			NGramModel nGramModel = getNGramModel();
 			// If self-testing a nested model, simply don't train at all. Do disable 'self' so the ModelRunner won't untrain either.
-			if (isSelf() && isSet(NESTED)) ModelRunner.selfTesting(false);
-			else ModelRunner.learn(nGramModel, trainDir);
+			if (isSelf() && isSet(NESTED)) modelRunner.selfTesting(false);
+			else modelRunner.learn(nGramModel, trainDir);
 			Model model = wrapModel(nGramModel);
-			Stream<Pair<File, List<List<Double>>>> fileMRRs = ModelRunner.predict(model, testDir);
+			Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predict(model, testDir);
 			int[] fileCount = { 0 };
-			DoubleSummaryStatistics stats = ModelRunner.getStats(fileMRRs.peek(f -> Writer.writeEntropies(f)).peek(f -> fileCount[0]++));
+			DoubleSummaryStatistics stats = modelRunner.getStats(
+					fileMRRs.peek(f -> Writer.writeEntropies(lexerRunner, f))
+					.peek(f -> fileCount[0]++));
 			System.out.printf("Testing complete, modeled %d files with %d tokens yielding average MRR:\t%.4f\n",
 					fileCount[0], stats.getCount(), stats.getAverage());
 		}

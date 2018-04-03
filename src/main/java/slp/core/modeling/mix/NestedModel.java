@@ -10,37 +10,36 @@ import java.util.Map;
 import slp.core.counting.Counter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.Model;
-import slp.core.modeling.ModelRunner;
 import slp.core.modeling.ngram.NGramModel;
+import slp.core.modeling.runners.ModelRunner;
 import slp.core.util.Pair;
 
 public class NestedModel extends AbstractModel {
 
+	private ModelRunner modelRunner;
+	
 	private Model global;
+	private Model mixed;
+	
 	private List<Model> models;
 	private List<File> files;
 	
-	private Model mixed;
-
-	public NestedModel(File testRoot) {
-		this(testRoot, NGramModel.standard());
+	public NestedModel(ModelRunner modelRunner, File testRoot) {
+		this(modelRunner, testRoot, NGramModel.standard());
 	}
 	
-	public NestedModel(File testRoot, Model global) {
-		this.global = global;
-		Model local = fromGlobal(true);
-		ModelRunner.learn(local, testRoot);
-
-		this.files = new ArrayList<>();
-		this.models = new ArrayList<>();
-		this.files.add(testRoot);
-		this.models.add(local);
-		this.mixed = makeMix();
+	public NestedModel(ModelRunner modelRunner, File testRoot, Model global) {
+		this(modelRunner, testRoot, global, null);
 	}
 
-	public NestedModel(File testRoot, Model global, Model local) {
+	public NestedModel(ModelRunner modelRunner, File testRoot, Model global, Model local) {
+		this.modelRunner = modelRunner;
 		this.global = global;
-
+		if (local == null) {
+			local = fromGlobal(true);
+			modelRunner.learn(local, testRoot);
+		}
+		
 		this.files = new ArrayList<>();
 		this.models = new ArrayList<>();
 		this.files.add(testRoot);
@@ -77,7 +76,7 @@ public class NestedModel extends AbstractModel {
 		int pos = 1;
 		for (; pos < this.files.size(); pos++) {
 			if (pos >= lineage.size() || !this.files.get(pos).equals(lineage.get(pos))) {
-				ModelRunner.learn(this.models.get(pos - 1), this.files.get(pos));
+				this.modelRunner.learn(this.models.get(pos - 1), this.files.get(pos));
 				this.files.subList(pos, this.files.size()).clear();
 				this.models.subList(pos, this.models.size()).clear();
 				break;
@@ -88,11 +87,11 @@ public class NestedModel extends AbstractModel {
 			Model model = fromGlobal();
 			this.files.add(file);
 			this.models.add(model);
-			ModelRunner.learn(model, file);
-			ModelRunner.forget(this.models.get(this.models.size() - 2), file);
+			this.modelRunner.learn(model, file);
+			this.modelRunner.forget(this.models.get(this.models.size() - 2), file);
 		}
 		this.files.add(next);
-		ModelRunner.forget(this.models.get(this.models.size() - 1), next);
+		this.modelRunner.forget(this.models.get(this.models.size() - 1), next);
 		this.mixed = makeMix();
 		this.mixed.notify(next);
 	}

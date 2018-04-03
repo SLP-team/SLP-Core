@@ -75,10 +75,11 @@ public class Writer {
 	}
 
 	// writes tokens and their entropies to a file
-	public static Pair<File, List<List<Double>>> writeEntropies(Pair<File, List<List<Double>>> p) {
+	public static Pair<File, List<List<Double>>> writeEntropies(LexerRunner lexerRunner, Pair<File, List<List<Double>>> p) {
 		if (CLI.logger != null) {
 			try {
-				List<List<String>> tokens = LexerRunner.lex(p.left).map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
+				List<List<String>> tokens = lexerRunner.lex(p.left)
+						.map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
 				CLI.logger.append(p.left.getAbsolutePath());
 				CLI.logger.append('\n');
 				List<List<Double>> right = p.right;

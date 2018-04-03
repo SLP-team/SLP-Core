@@ -11,8 +11,16 @@ public class ADModel extends NGramModel {
 		super();
 	}
 	
+	public ADModel(int order) {
+		super(order);
+	}
+
 	public ADModel(Counter counter) {
 		super(counter);
+	}
+	
+	public ADModel(int order, Counter counter) {
+		super(order, counter);
 	}
 	
 	@Override
