@@ -5,7 +5,7 @@ import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.stream.Stream;
 
-import slp.core.lexing.LexerRunner;
+import slp.core.lexing.runners.LexerRunner;
 import slp.core.lexing.simple.PunctuationLexer;
 import slp.core.modeling.Model;
 import slp.core.modeling.ngram.ADMModel;

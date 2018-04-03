@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import slp.core.lexing.LexerRunner;
+import slp.core.lexing.runners.LexerRunner;
 import slp.core.modeling.Model;
 import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;

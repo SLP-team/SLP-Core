@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import slp.core.CLI;
-import slp.core.lexing.LexerRunner;
+import slp.core.lexing.runners.LexerRunner;
 import slp.core.util.Pair;
 
 public class Writer {

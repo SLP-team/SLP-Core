@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import slp.core.counting.giga.GigaCounter;
-import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
+import slp.core.lexing.runners.LexerRunner;
 import slp.core.modeling.CacheModel;
 import slp.core.modeling.Model;
 import slp.core.modeling.mix.InverseMixModel;

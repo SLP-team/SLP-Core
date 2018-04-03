@@ -1,4 +1,4 @@
-package slp.core.lexing;
+package slp.core.lexing.runners;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import slp.core.io.Writer;
+import slp.core.lexing.Lexer;
 import slp.core.lexing.simple.PunctuationLexer;
 import slp.core.translating.Vocabulary;
 

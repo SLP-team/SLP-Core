@@ -15,7 +15,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import slp.core.io.Reader;
-import slp.core.lexing.LexerRunner;
+import slp.core.lexing.runners.LexerRunner;
 
 public class VocabularyRunner {
 	

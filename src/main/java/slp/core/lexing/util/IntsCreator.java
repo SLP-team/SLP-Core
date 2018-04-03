@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import slp.core.lexing.LexerRunner;
 import slp.core.lexing.code.JavaLexer;
+import slp.core.lexing.runners.LexerRunner;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
 import slp.core.util.Util;
