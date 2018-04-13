@@ -35,6 +35,12 @@ import slp.core.util.Pair;
 public interface Model {
 	
 	/**
+	 * Creates a new instance of the same type as this model, but without any backing data if applicable.
+	 * This allows the creation of many isomorphic models, as for example required by nesting.
+	 */
+	Model copy();
+
+	/**
 	 * Notifies model of upcoming test file, allowing it to set up accordingly (e.g. for nested models)
 	 * <br />
 	 * <em>Note:</em> most models may simply do nothing, but is tentatively left <code>abstract</code> as a reminder.
@@ -181,4 +187,5 @@ public interface Model {
 	 * @return Probability/Confidence Pair for token at {@code index} in {@code input}
 	 */
 	Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int index);
+	
 }

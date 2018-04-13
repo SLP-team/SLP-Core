@@ -117,6 +117,13 @@ public class LexerRunner {
 	public String getRegex() {
 		return this.regex;
 	}
+
+	/**
+	 * Returns whether the file matches the regex and will thus be lexed by this class
+	 */
+	public boolean willLexFile(File file) {
+		return file.getName().matches(this.regex);
+	}
 	
 	/**
 	 * Convenience method that translates tokens to indices after lexing before writing to file (default: no translation).
@@ -170,7 +177,7 @@ public class LexerRunner {
 	 * @param file File to lex
 	 */
 	public Stream<Stream<String>> lex(File file) {
-		if (!file.getName().matches(this.regex)) return Stream.empty();
+		if (!willLexFile(file)) return Stream.empty();
 		return lexTokens(this.lexer.lex(file));
 	}
 

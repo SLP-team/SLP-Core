@@ -116,32 +116,44 @@ public class GigaCounter implements Counter {
 			this.counter.countBatch(indices);
 		}
 		else {
-			int ptr = getNextAvailable();
-			this.occupied[ptr] = true;
-			this.fjp.submit(() -> {
-				testGraveYard(ptr);
-				indices.forEach(ix -> this.simpleCounters.get(ptr).merge(ix, 1, Integer::sum));
-				this.counts[ptr][0]++;
-				this.occupied[ptr] = false;
-			});
+			submitTask(indices);
 		}
 	}
-	
+
 	@Override
 	public void count(List<Integer> indices) {
 		if (this.counter != null) {
 			this.counter.count(indices);
 		}
 		else {
-			int ptr = getNextAvailable();
-			this.occupied[ptr] = true;
-			this.fjp.submit(() -> {
-				testGraveYard(ptr);
-				this.simpleCounters.get(ptr).merge(indices, 1, Integer::sum);
-				this.counts[ptr][1]++;
-				this.occupied[ptr] = false;
-			});
+			submitTask(indices);
 		}
+	}
+
+	/**
+	 * Submit the indices to be counted to the global ForkJoinPool.
+	 * This method live-locks the main thread if the fjp has more than 1K waiting tasks, to prevent flooding the JVM.
+	 * <br/>
+	 * For simplicity, we use the same method for counting and batch
+	 * counting and distinguish only inside the task submission, hence the type erasure in the signature.
+	 * @param task
+	 */
+	@SuppressWarnings("unchecked")
+	private void submitTask(List<?> task) {
+		if (task.isEmpty()) return;
+		int ptr = getNextAvailable();
+		this.occupied[ptr] = true;
+		while (this.fjp.getPoolSize() > 1000);
+		this.fjp.submit(() -> {
+			testGraveYard(ptr);
+			if (task.get(0) instanceof List<?>) {
+				task.forEach(x -> this.simpleCounters.get(ptr).merge((List<Integer>) x, 1, Integer::sum));
+			} else {
+				this.simpleCounters.get(ptr).merge(((List<Integer>) task), 1, Integer::sum);
+			}
+			this.counts[ptr][0]++;
+			this.occupied[ptr] = false;
+		});
 	}
 
 	@Override

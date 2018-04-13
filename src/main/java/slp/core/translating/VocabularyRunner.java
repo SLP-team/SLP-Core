@@ -15,12 +15,11 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import slp.core.io.Reader;
-import slp.core.lexing.runners.LexerRunner;
+import slp.core.lexing.Lexer;
 
 public class VocabularyRunner {
 	
 	private static final int PRINT_FREQ = 1000000;
-	private static boolean close = false;
 	private static int cutOff = 0;
 
 	/**
@@ -40,21 +39,11 @@ public class VocabularyRunner {
 	}
 	
 	/**
-	 * Closes the vocabulary after building/reading. Default: never close, as has been shown to be more applicable
-	 * to modeling (particularly) source code.
-	 * <br />
-	 * See also: {@link Vocabulary#close()} (and open()) to close/open vocabulary after construction
-	 */
-	public static void close(boolean close) {
-		VocabularyRunner.close = close;
-	}
-	
-	/**
 	 * Build vocabulary on all files reachable from (constructor) provided root, 
 	 * possibly filtering by name/extension (see {@link #setRegex(String)}/{@link #setExtension(String)}).
 	 * @return 
 	 */
-	public static Vocabulary build(LexerRunner lexerRunner, File root) {
+	public static Vocabulary build(Lexer lexer, File root) {
 		Vocabulary vocabulary = new Vocabulary();
 		try {
 			int[] c = { 0 };
@@ -62,7 +51,7 @@ public class VocabularyRunner {
 			Files.walk(root.toPath())
 					.map(Path::toFile)
 					.filter(File::isFile)
-					.flatMap(lexerRunner::lex)
+					.flatMap(lexer::lex)
 					.flatMap(l -> l)
 					.peek(w -> {
 						if (++c[0] % PRINT_FREQ == 0) {
@@ -86,7 +75,6 @@ public class VocabularyRunner {
 				}
 			}
 			vocabulary.store(Vocabulary.UNK, vocabulary.getCount(Vocabulary.UNK) + unkCount);
-			if (close) vocabulary.close();
 			if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + vocabulary.size());
 			return vocabulary;
 		} catch (IOException e) {
@@ -116,7 +104,6 @@ public class VocabularyRunner {
 				String token = split[2];
 				vocabulary.store(token, count);
 			});
-		if (close) vocabulary.close();
 		return vocabulary;
 	}
 

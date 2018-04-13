@@ -44,6 +44,11 @@ public class CacheModel extends AbstractModel {
 	}
 	
 	@Override
+	public Model copy() {
+		return new CacheModel(this.model.copy());
+	}
+
+	@Override
 	public void notify(File next) {
 		try {
 			this.model = this.model.getClass().getConstructor().newInstance();
@@ -92,5 +97,10 @@ public class CacheModel extends AbstractModel {
 	@Override
 	public Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index) {
 		return this.model.predictToken(input, index);
+	}
+	
+	@Override
+	public String toString() {
+		return this.getClass().getSimpleName();
 	}
 }

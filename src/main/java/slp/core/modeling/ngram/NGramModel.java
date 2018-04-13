@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import slp.core.counting.Counter;
 import slp.core.counting.trie.MapTrieCounter;
 import slp.core.modeling.AbstractModel;
+import slp.core.modeling.Model;
 import slp.core.modeling.runners.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
@@ -39,6 +40,11 @@ public abstract class NGramModel extends AbstractModel {
 
 	public Counter getCounter() {
 		return this.counter;
+	}
+
+	@Override
+	public Model copy() {
+		return standard(this.counter);
 	}
 
 	@Override
@@ -88,8 +94,8 @@ public abstract class NGramModel extends AbstractModel {
 			hits++;
 		}
 		if (mass > 0) probability /= mass;
-		// In the new model, final confidence is same for all n-gram models, proportional to longest context seen
-		double confidence = (1 - Math.pow(2, -hits));
+		// In the new model, final confidence is asymptotically close to 1 for all n-gram models
+		double confidence = 1 - Math.pow(2, -hits);
 		return Pair.of(probability, confidence);
 	}
 
@@ -138,5 +144,10 @@ public abstract class NGramModel extends AbstractModel {
 			e.printStackTrace();
 			return new JMModel();
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return this.getClass().getSimpleName();
 	}
 }

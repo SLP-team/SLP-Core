@@ -7,6 +7,11 @@ import slp.core.util.Pair;
 
 public class InverseMixModel extends MixModel {
 
+	/**
+	 * Assumes the two models report their confidence as asymptotically close to 1.
+	 * The way to mix probabilities is then to compare the inverses of the confidences
+	 * and use these to weight the respective models' guesses.
+	 */
 	public InverseMixModel(Model model1, Model model2) {
 		super(model1, model2);
 	}
