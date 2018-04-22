@@ -317,12 +317,16 @@ public class CLI {
 			File inDir = new File(arguments[1]);
 			File outDir = new File(arguments[2]);
 			boolean emptyVocab = vocabulary.size() <= 1;
-			lexerRunner.lexDirectoryToIndices(inDir, outDir, vocabulary);
-			if (translate && emptyVocab) {
-				File vocabFile = getVocabularyFile();
-				if (!vocabFile.exists()) vocabFile = new File(outDir.getParentFile(), "train.vocab");
-				System.out.println("Writing vocabulary to: " + vocabFile);
-				VocabularyRunner.write(vocabulary, vocabFile);
+			if (!translate) lexerRunner.lexDirectory(inDir, outDir);
+			else {
+				lexerRunner.lexDirectoryToIndices(inDir, outDir, vocabulary);
+				// We also write the vocabulary if it was empty; otherwise the indices are meaningless
+				if (emptyVocab) {
+					File vocabFile = getVocabularyFile();
+					if (!vocabFile.exists()) vocabFile = new File(outDir.getParentFile(), "train.vocab");
+					System.out.println("Writing vocabulary to: " + vocabFile);
+					VocabularyRunner.write(vocabulary, vocabFile);
+				}
 			}
 		}
 		else {

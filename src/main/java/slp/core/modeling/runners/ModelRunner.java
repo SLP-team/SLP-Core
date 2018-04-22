@@ -41,7 +41,7 @@ public class ModelRunner {
 	
 	protected final LexerRunner lexerRunner;
 	protected final Vocabulary vocabulary;
-	protected Model model;
+	protected final Model model;
 
 	private boolean selfTesting = false;
 	
@@ -58,20 +58,18 @@ public class ModelRunner {
 	public Model getModel() {
 		return this.model;
 	}
-	
-	public void setModel(Model model) {
-		this.model = model;
-	}
 
 	public Vocabulary getVocabulary() {
 		return this.vocabulary;
 	}
 
 	/**
-	 * Configure this ModelRunner for the specifics of its task
+	 * Enables self testing: if we are testing on data that we also trained on, and our models are able to forget events,
+	 * we can simulated training on all-but one sequence (the one we are modeling) by temporarily forgetting
+	 * an event, modeling it and re-learning it afterwards. This maximizes use of context information and can be used
+	 * to simulate full cross-validation.
 	 * 
-	 * @param selfTesting Whether we are testing on data that we also trained on (i.e. full cross-validation).
-	 * 					  If true, we will "forget" every sequence before modeling it and then "re-learn" it afterwards
+	 * @param selfTesting If true, will temporarily "forget" every sequence before modeling it and "re-learn" it afterwards
 	 */
 	public void setSelfTesting(boolean selfTesting) {
 		this.selfTesting = selfTesting;
