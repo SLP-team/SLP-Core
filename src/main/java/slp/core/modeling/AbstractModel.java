@@ -61,28 +61,28 @@ public abstract class AbstractModel implements Model {
 	 * which invokes {@link #modelAtIndex(List, int)} at each index and takes care of dynamic updating after each token.
 	 */
 	@Override
-	public final Pair<Double, Double> modelToken(List<Integer> input, int i) {
-		Pair<Double, Double> modeled = modelAtIndex(input, i);
-		if (this.dynamic) this.learnToken(input, i);
+	public final Pair<Double, Double> modelToken(List<Integer> input, int index) {
+		Pair<Double, Double> modeled = modelAtIndex(input, index);
+		if (this.dynamic) this.learnToken(input, index);
 		return modeled;
 	}
 	
-	public abstract Pair<Double, Double> modelAtIndex(List<Integer> input, int i);
+	public abstract Pair<Double, Double> modelAtIndex(List<Integer> input, int index);
 	
 	/**
 	 * Default implementation of {@link #predictToken(List, int)},
 	 * which invokes {@link #predictAtIndex(List, int)} at each index and takes care of dynamic updating for each token.
 	 */
 	@Override
-	public final Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int i) {
+	public final Map<Integer, Pair<Double, Double>> predictToken(List<Integer> input, int index) {
 		boolean temp = this.dynamic;
 		this.setDynamic(false);
-		Map<Integer, Pair<Double, Double>> predictions = predictAtIndex(input, i);
+		Map<Integer, Pair<Double, Double>> predictions = predictAtIndex(input, index);
 		this.setDynamic(temp);
-		if (this.dynamic) this.learnToken(input, i);
+		if (this.dynamic) this.learnToken(input, index);
 		return predictions;
 	}
 	
-	public abstract Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int i);
+	public abstract Map<Integer, Pair<Double, Double>> predictAtIndex(List<Integer> input, int index);
 
 }

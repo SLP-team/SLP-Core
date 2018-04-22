@@ -1,7 +1,6 @@
 package slp.core.modeling.mix;
 
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,18 +37,6 @@ public abstract class MixModel implements Model {
 	
 	public void setRight(Model model) {
 		this.right = model;
-	}
-	
-	@Override
-	public Model copy() {
-		try {
-			return this.getClass().getConstructor(Model.class, Model.class)
-					.newInstance(this.left.copy(), this.right.copy());
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
-				| NoSuchMethodException | SecurityException e) {
-			e.printStackTrace();
-			return null;
-		}
 	}
 	
 	@Override

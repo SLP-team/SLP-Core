@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import slp.core.counting.Counter;
 import slp.core.counting.trie.MapTrieCounter;
 import slp.core.modeling.AbstractModel;
-import slp.core.modeling.Model;
 import slp.core.modeling.runners.ModelRunner;
 import slp.core.sequencing.NGramSequencer;
 import slp.core.util.Pair;
@@ -40,11 +39,6 @@ public abstract class NGramModel extends AbstractModel {
 
 	public Counter getCounter() {
 		return this.counter;
-	}
-
-	@Override
-	public Model copy() {
-		return standard(this.counter);
 	}
 
 	@Override

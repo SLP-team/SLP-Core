@@ -9,11 +9,13 @@ import slp.core.counting.giga.GigaCounter;
 import slp.core.lexing.Lexer;
 import slp.core.lexing.code.JavaLexer;
 import slp.core.lexing.runners.LexerRunner;
-import slp.core.modeling.CacheModel;
 import slp.core.modeling.Model;
+import slp.core.modeling.dynamic.CacheModel;
+import slp.core.modeling.dynamic.NestedModel;
 import slp.core.modeling.mix.MixModel;
 import slp.core.modeling.ngram.JMModel;
 import slp.core.modeling.runners.ModelRunner;
+import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
 
 public class JavaRunner {
@@ -26,21 +28,22 @@ public class JavaRunner {
 
 		// 1. Lexing
 		//   a. Set up lexer using a JavaLexer
+		//		- The second parameter informs it that we want to files as a block, not line by line
 		Lexer lexer = new JavaLexer();
-		LexerRunner lexerRunner = new LexerRunner(lexer);
-		//   b. Do not tokenize per line for Java (invoked for the sake of example; false is the default)
-		lexerRunner.setPerLine(false);
-		//   c. But, do add sentence markers (for the start and end of each file)
+		LexerRunner lexerRunner = new LexerRunner(lexer, false);
+		//   b. Since our data does not contain sentence markers (for the start and end of each file), add these here
+		//		- The model will assume that these markers are present and always skip the first token when modeling
 		lexerRunner.setSentenceMarkers(true);
-		//   d. Only lex (and thus implicitly, model) files that end with "java". See also 'setRegex'
+		//   c. Only lex (and model) files that end with "java". See also 'setRegex'
 		lexerRunner.setExtension("java");
 		
 		
 		// 2. Vocabulary:
-		//    - Since we are not modifying the defaults in any way, we'll just let the vocabulary be built while training.
+		//    - For code, we typically make an empty vocabulary and let it be built while training.
 		//    - Building it first using the default settings (no cut-off, don't close after building)
 		//		should yield the same result, and may be useful if you want to write the vocabulary before training.
-		//    - If interested, use: VocabularyRunner.build(lexer, train);
+		//    - If interested, use: VocabularyRunner.build(lexerRunner, train);
+		Vocabulary vocabulary = new Vocabulary();
 		
 		
 		// 3. Model
@@ -48,28 +51,30 @@ public class JavaRunner {
 		//		 - The n-gram order of 6 is used, which is also the standard
 		//       - Let's use a GigaCounter (useful for large corpora) here as well; the nested model later on will copy this behavior.
 		Model model = new JMModel(6, new GigaCounter());
-		//       - We pass this Model to a ModelRunner, which takes care of most of the work and configuration for us
-		ModelRunner modelRunner = new ModelRunner(lexerRunner, model);
-		//    b. Self-testing if train is equal to test; this will un-count each file before modeling it.
-		modelRunner.setSelfTesting(train.equals(test));
-		//    c. First, train this model on all files in 'train' recursively, using the usual updating mechanism (same as for dynamic updating).
-		//       - Note that this invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
-		//          other models may prefer to pre-train when calling the Model's constructor.
-		modelRunner.learn(train);
-		//    d. To get more fancy for source code, we can convert the model into a complex mix model.
-		//       - First wrap in a nested model, causing it to learn all files in test into a new 'local' model
-		modelRunner.setNested(test);
+		//    b. We can get more fancy by converting the model into a complex mix model.
+		//       - For instance, we can wrap the ModelRunner in a nested model, causing it to learn all files in test into a new 'local' model
+		//		 - Most mixed models don't need access to a LexerRunner or vocabulary, but NestedModel actually creates new Models on the fly
+		model = new NestedModel(model, lexerRunner, vocabulary, test);
 		//       - Then, add an ngram-cache component.
-		//         * Note, order matters! The most local model should be "right-most" so it is called upon last (i.e. "gets the final say")
-		//         * This is also why we apply the cache after the nested model
+		//         * Order matters here; the last model in the mix gets the final say and thus the most importance
 		model = MixModel.standard(model, new CacheModel());
-		//       - Finally, enable dynamic updating for the whole mixture (won't affect cache; it's dynamic by default)
+		//       - Finally, we can enable dynamic updating for the whole mixture (won't affect cache; it's dynamic by default)
 		model.setDynamic(true);
+		//	  c. We create a ModelRunner with this model and ask it to learn the train directory
+		//		 - This invokes Model.learn for each file, which is fine for n-gram models since these are count-based;
+		//         other model implementations may prefer to train in their own way.
+		ModelRunner modelRunner = new ModelRunner(model, lexerRunner, vocabulary);
+		modelRunner.learnDirectory(train);
+		//    d. We assume you are self-testing if the train and test directory are equal.
+		//		 This will make it temporarily forget any sequence to model, effectively letting you train and test on all your data
+		modelRunner.setSelfTesting(train.equals(test));
+		//		 - If you plan on using a NestedModel to self-test, you can also just remove the two above calls;
+		//		   they teach the global model the same things that the nested model knows, which barely boosts performance.
 		
 		
 		// 4. Running
-		//    a. Model each file in 'test' recursively
-		Stream<Pair<File, List<List<Double>>>> modeledFiles = modelRunner.model(test);
+		//    a. Finally, we model each file in 'test' recursively
+		Stream<Pair<File, List<List<Double>>>> modeledFiles = modelRunner.modelDirectory(test);
 		//	  b. Retrieve overall entropy statistics using ModelRunner's convenience method
 		DoubleSummaryStatistics statistics = modelRunner.getStats(modeledFiles);
 		System.out.printf("Modeled %d tokens, average entropy:\t%.4f\n", statistics.getCount(), statistics.getAverage());

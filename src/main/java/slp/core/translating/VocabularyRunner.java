@@ -6,16 +6,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import slp.core.io.Reader;
-import slp.core.lexing.Lexer;
+import slp.core.lexing.runners.LexerRunner;
 
 public class VocabularyRunner {
 	
@@ -43,44 +40,34 @@ public class VocabularyRunner {
 	 * possibly filtering by name/extension (see {@link #setRegex(String)}/{@link #setExtension(String)}).
 	 * @return 
 	 */
-	public static Vocabulary build(Lexer lexer, File root) {
+	public static Vocabulary build(LexerRunner lexerRunner, File root) {
 		Vocabulary vocabulary = new Vocabulary();
-		try {
-			int[] c = { 0 };
-			Map<String, Integer> counts = new HashMap<>();
-			Files.walk(root.toPath())
-					.map(Path::toFile)
-					.filter(File::isFile)
-					.flatMap(lexer::lex)
-					.flatMap(l -> l)
-					.peek(w -> {
-						if (++c[0] % PRINT_FREQ == 0) {
-							System.out.printf("Building vocabulary: tokens processed: %dM, size: %dK\n",
-									Math.round(c[0]/PRINT_FREQ), Math.round(vocabulary.size()/1e3));
-						}
-					})
-					.forEach(t -> counts.merge(t, 1, Integer::sum));
-			List<Entry<String, Integer>> ordered = counts.entrySet().stream()
-				.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
-				.collect(Collectors.toList());
-			int unkCount = 0;
-			for (Entry<String, Integer> entry : ordered) {
-				String token = entry.getKey();
-				int count = entry.getValue();
-				if (count < cutOff) {
-					unkCount += count;
-				}
-				else {
-					vocabulary.store(token, count);
-				}
+		int[] c = { 0 };
+		Map<String, Integer> counts = lexerRunner.lexDirectory(root)
+			.flatMap(f -> f.right)
+			.flatMap(l -> l)
+			.peek(t -> {
+				if (++c[0] % PRINT_FREQ == 0)
+					System.out.printf("Building vocabulary, %dM tokens processed\n", Math.round(c[0]/PRINT_FREQ));
+			})
+			.collect(Collectors.toMap(w -> w, w -> 1, Integer::sum));
+		List<Entry<String, Integer>> ordered = counts.entrySet().stream()
+			.sorted((e1, e2) -> -Integer.compare(e1.getValue(), e2.getValue()))
+			.collect(Collectors.toList());
+		int unkCount = 0;
+		for (Entry<String, Integer> entry : ordered) {
+			String token = entry.getKey();
+			int count = entry.getValue();
+			if (count < cutOff) {
+				unkCount += count;
 			}
-			vocabulary.store(Vocabulary.UNK, vocabulary.getCount(Vocabulary.UNK) + unkCount);
-			if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + vocabulary.size());
-			return vocabulary;
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
+			else {
+				vocabulary.store(token, count);
+			}
 		}
+		vocabulary.store(Vocabulary.UNK, vocabulary.getCount(Vocabulary.UNK) + unkCount);
+		if (c[0] > PRINT_FREQ) System.out.println("Vocabulary constructed on " + c[0] + " tokens, size: " + vocabulary.size());
+		return vocabulary;
 	}
 	
 	/**

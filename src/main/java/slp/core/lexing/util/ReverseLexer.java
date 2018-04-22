@@ -10,31 +10,30 @@ import slp.core.lexing.Lexer;
 
 public class ReverseLexer implements Lexer {
 	
-	private Lexer lexer;
+	private final Lexer lexer;
 	
 	public ReverseLexer(Lexer lexer) {
 		this.lexer = lexer;
 	}
 
-	public Stream<Stream<String>> lex(File file) {
-		Stream<Stream<String>> lexed = this.lexer.lex(file);
-		return reverse(lexed);
-	}
-
-	public Stream<Stream<String>> lex(String text) {
-		Stream<Stream<String>> lexed = this.lexer.lex(text);
-		return reverse(lexed);
-	}
-
-	public Stream<Stream<String>> lex(Stream<String> lines) {
-		Stream<Stream<String>> lexed = this.lexer.lex(lines);
-		return reverse(lexed);
-	}
-	
 	@Override
-	public Stream<Stream<String>> lex(List<String> lines) {
-		Stream<Stream<String>> lexed = this.lexer.lex(lines);
+	public Stream<Stream<String>> lexFile(File file) {
+		Stream<Stream<String>> lexed = this.lexer.lexFile(file);
 		return reverse(lexed);
+	}
+
+	@Override
+	public Stream<Stream<String>> lexText(String text) {
+		Stream<Stream<String>> lexed = this.lexer.lexText(text);
+		return reverse(lexed);
+	}
+
+	@Override
+	public Stream<String> lexLine(String line) {
+		Stream<String> lexed = this.lexer.lexLine(line);
+		List<String> collect = lexed.collect(Collectors.toList());
+		Collections.reverse(collect);
+		return collect.stream();
 	}
 
 	private Stream<Stream<String>> reverse(Stream<Stream<String>> lexed) {

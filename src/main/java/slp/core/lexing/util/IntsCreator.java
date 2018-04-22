@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import slp.core.lexing.Lexer;
 import slp.core.lexing.code.JavaLexer;
-import slp.core.lexing.runners.LexerRunner;
 import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
 import slp.core.util.Util;
@@ -40,12 +40,12 @@ public class IntsCreator {
 	}
 
 	private static void writeIXs(File dir, File out) throws IOException {
-		LexerRunner lexerRunner = new LexerRunner(new JavaLexer());
+		Lexer lexer = new JavaLexer();
 		Vocabulary vocabulary = new Vocabulary();
 		try (FileWriter fw = new FileWriter(out)) {
 			List<File> files = Util.getFiles(dir);
 			for (File file : files) {
-				List<String> tokens = lexerRunner.lex(file)
+				List<String> tokens = lexer.lexFile(file)
 						.flatMap(vocabulary::toIndices)
 						.map(ix -> "" + ix)
 						.collect(Collectors.toList());

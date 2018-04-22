@@ -21,8 +21,9 @@ import slp.core.lexing.simple.CharacterLexer;
 import slp.core.lexing.simple.PunctuationLexer;
 import slp.core.lexing.simple.TokenizedLexer;
 import slp.core.lexing.simple.WhitespaceLexer;
-import slp.core.modeling.CacheModel;
 import slp.core.modeling.Model;
+import slp.core.modeling.dynamic.CacheModel;
+import slp.core.modeling.dynamic.NestedModel;
 import slp.core.modeling.mix.MixModel;
 import slp.core.modeling.ngram.ADMModel;
 import slp.core.modeling.ngram.ADModel;
@@ -95,8 +96,8 @@ public class CLI {
 		
 		lexer = getLexer();
 		model = getModel();
-		vocabulary = setupVocabulary();
 		lexerRunner = setupLexerRunner();
+		vocabulary = setupVocabulary();
 		modelRunner = setupModelRunner();
 		setupLogger();
 		switch (mode) {
@@ -196,8 +197,7 @@ public class CLI {
 	}
 
 	private static LexerRunner setupLexerRunner() {
-		LexerRunner lexerRunner = new LexerRunner(lexer, vocabulary);
-		if (isSet(PER_LINE)) lexerRunner.setPerLine(true);
+		LexerRunner lexerRunner = new LexerRunner(lexer, isSet(PER_LINE));
 		if (isSet(ADD_DELIMS)) lexerRunner.setSentenceMarkers(true);
 		if (isSet(EXTENSION)) lexerRunner.setExtension(getArg(EXTENSION));
 		return lexerRunner;
@@ -220,12 +220,8 @@ public class CLI {
 	}
 
 	private static ModelRunner setupModelRunner() {
-		ModelRunner modelRunner = new ModelRunner(lexerRunner, model);
+		ModelRunner modelRunner = new ModelRunner(model, lexerRunner, vocabulary);
 		if (isSelf()) modelRunner.setSelfTesting(true);
-		if (isSet(NESTED)) {
-			if (isSet(TEST)) modelRunner.setNested(new File(getArg(TEST)));
-			else exit("Nested mode set, but no test directory given!");
-		}
 		return modelRunner;
 	}
 
@@ -303,6 +299,10 @@ public class CLI {
 	}
 
 	private static Model wrapModel(Model m) {
+		if (isSet(NESTED)) {
+			if (isSet(TEST)) m = new NestedModel(model, lexerRunner, vocabulary, new File(getArg(TEST)));
+			else exit("Nested mode set, but no test directory given!");
+		}
 		if (isSet(CACHE)) m = MixModel.standard(m, new CacheModel());
 		if (isSet(DYNAMIC)) m.setDynamic(true);
 		return m;
@@ -316,9 +316,8 @@ public class CLI {
 		if (arguments.length >= 3) {
 			File inDir = new File(arguments[1]);
 			File outDir = new File(arguments[2]);
-			lexerRunner.setPreTranslate(translate);
 			boolean emptyVocab = vocabulary.size() <= 1;
-			lexerRunner.lexDirectory(inDir, outDir);
+			lexerRunner.lexDirectoryToIndices(inDir, outDir, vocabulary);
 			if (translate && emptyVocab) {
 				File vocabFile = getVocabularyFile();
 				if (!vocabFile.exists()) vocabFile = new File(outDir.getParentFile(), "train.vocab");
@@ -340,7 +339,7 @@ public class CLI {
 				exit("Source path for building vocabulary does not exist: " + inDir);
 			}
 			if (isSet(UNK_CUTOFF)) VocabularyRunner.cutOff(Integer.parseInt(getArg(UNK_CUTOFF)));
-			vocabulary = VocabularyRunner.build(lexer, inDir);
+			vocabulary = VocabularyRunner.build(lexerRunner, inDir);
 			VocabularyRunner.write(vocabulary, outFile);
 		}
 		else {
@@ -356,7 +355,7 @@ public class CLI {
 			exit("Source path for training does not exist: " + inDir);
 		}
 		boolean emptyVocab = vocabulary.size() <= 1;
-		modelRunner.learn(inDir);
+		modelRunner.learnDirectory(inDir);
 		Counter counter = ((NGramModel) model).getCounter();
 		// Force GigaCounter.resolve() (if applicable), just for accurate timings below
 		counter.getCount();
@@ -383,7 +382,7 @@ public class CLI {
 			exit("Counter file to use not found: " + getArg(COUNTER));
 		}
 		
-		Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.model(inDir);
+		Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.modelDirectory(inDir);
 		int[] fileCount = { 0 };
 		DoubleSummaryStatistics stats = modelRunner.getStats(
 				fileProbs.peek(f -> Writer.writeEntropies(lexerRunner, f))
@@ -395,7 +394,7 @@ public class CLI {
 	private static void trainTest() {
 		trainModel();
 		File testDir = getTestFile();
-		Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.model(testDir);
+		Stream<Pair<File, List<List<Double>>>> fileProbs = modelRunner.modelDirectory(testDir);
 		int[] fileCount = { 0 };
 		DoubleSummaryStatistics stats = modelRunner.getStats(
 				fileProbs.peek(f -> Writer.writeEntropies(lexerRunner, f))
@@ -444,7 +443,7 @@ public class CLI {
 		else if (testDir == null || !testDir.exists()) {
 			exit("No valid test path given for train-test mode, exiting");
 		}
-		if (trainDir != null) modelRunner.learn(trainDir);
+		if (trainDir != null) modelRunner.learnDirectory(trainDir);
 	}
 
 	private static boolean isSet(String arg) {

@@ -1,4 +1,4 @@
-package slp.core.modeling;
+package slp.core.modeling.dynamic;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import slp.core.modeling.AbstractModel;
+import slp.core.modeling.Model;
 import slp.core.modeling.ngram.NGramModel;
 import slp.core.util.Pair;
 
@@ -44,11 +46,6 @@ public class CacheModel extends AbstractModel {
 	}
 	
 	@Override
-	public Model copy() {
-		return new CacheModel(this.model.copy());
-	}
-
-	@Override
 	public void notify(File next) {
 		try {
 			this.model = this.model.getClass().getConstructor().newInstance();
@@ -60,14 +57,31 @@ public class CacheModel extends AbstractModel {
 		this.cachedRefs.clear();
 	}
 
+	// The cache model cannot be taught new events, it only learns after modeling
 	@Override
-	public void learnToken(List<Integer> input, int index) {
-		if (this.capacity == 0) return;
-		store(input, index);
-		this.model.learnToken(input, index);
-		if (this.cache.size() > this.capacity) {
-			Pair<List<Integer>, Integer> removed = this.cache.removeFirst();
-			this.model.forgetToken(removed.left, removed.right);
+	public void learn(List<Integer> input) { }
+	@Override
+	public void learnToken(List<Integer> input, int index) { }
+	@Override
+	public void forget(List<Integer> input) { }
+	@Override
+	public void forgetToken(List<Integer> input, int index) { }
+
+	@Override
+	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
+		Pair<Double, Double> modeled = this.model.modelToken(input, index);
+		updateCache(input, index);
+		return modeled;
+	}
+
+	private void updateCache(List<Integer> input, int index) {
+		if (this.capacity > 0 && this.dynamic) {
+			store(input, index);
+			this.model.learnToken(input, index);
+			if (this.cache.size() > this.capacity) {
+				Pair<List<Integer>, Integer> removed = this.cache.removeFirst();
+				this.model.forgetToken(removed.left, removed.right);
+			}
 		}
 	}
 
@@ -79,19 +93,6 @@ public class CacheModel extends AbstractModel {
 			this.cachedRefs.put(hash, list);
 		}
 		this.cache.addLast(Pair.of(list, index));
-	}
-
-	@Override
-	public void learn(List<Integer> input) { }
-	@Override
-	public void forget(List<Integer> input) { }
-	@Override
-	public void forgetToken(List<Integer> input, int index) { }
-
-
-	@Override
-	public Pair<Double, Double> modelAtIndex(List<Integer> input, int index) {
-		return this.model.modelToken(input, index);
 	}
 
 	@Override

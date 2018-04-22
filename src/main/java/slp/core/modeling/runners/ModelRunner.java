@@ -2,10 +2,10 @@ package slp.core.modeling.runners;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.DoubleSummaryStatistics;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import slp.core.lexing.Lexer;
 import slp.core.lexing.runners.LexerRunner;
 import slp.core.modeling.Model;
 import slp.core.modeling.ngram.NGramModel;
@@ -20,8 +21,13 @@ import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
 
 /**
- * The this class provides the third step in modeling (after lexing, translating).
- * It requires a {@linkplain LexerRunner} and {@linkplain Model} and exposes modeling methods for convenience.
+ * This class can be used to run {@link Model}-related functions over bodies of code.
+ * It provides the lexing and translation steps necessary to allow immediate learning and modeling from directories or files.
+ * As such, it wraps the pipeline stages {@link Reader} --> {@link Lexer} --> Translate ({@link Vocabulary}) --> {@link Model}.
+ * <br />
+ * This class uses a {@link LexerRunner}, which differentiates between file and line data and provides a some additional utilities.
+ * It also provides easier access to self-testing (in which each line is forgotten before modeling it and re-learned after),
+ * which is helpful for count-based models such as {@link NGramModel}s.
  * 
  * @author Vincent Hellendoorn
  *
@@ -34,22 +40,41 @@ public class ModelRunner {
 	public static int GLOBAL_PREDICTION_CUTOFF = 10;
 	
 	protected final LexerRunner lexerRunner;
-	protected final Model model;
-	
+	protected final Vocabulary vocabulary;
+	protected Model model;
+
 	private boolean selfTesting = false;
-	private Nester nester;
 	
-	public ModelRunner(LexerRunner lexerRunner, Model model) {
-		this.lexerRunner = lexerRunner;
+	public ModelRunner(Model model, LexerRunner lexer, Vocabulary vocabulary) {
+		this.lexerRunner = lexer;
+		this.vocabulary = vocabulary;
 		this.model = model;
 	}
 	
 	public LexerRunner getLexerRunner() {
 		return this.lexerRunner;
 	}
-	
+
 	public Model getModel() {
 		return this.model;
+	}
+	
+	public void setModel(Model model) {
+		this.model = model;
+	}
+
+	public Vocabulary getVocabulary() {
+		return this.vocabulary;
+	}
+
+	/**
+	 * Configure this ModelRunner for the specifics of its task
+	 * 
+	 * @param selfTesting Whether we are testing on data that we also trained on (i.e. full cross-validation).
+	 * 					  If true, we will "forget" every sequence before modeling it and then "re-learn" it afterwards
+	 */
+	public void setSelfTesting(boolean selfTesting) {
+		this.selfTesting = selfTesting;
 	}
 	
 	public static int getPredictionCutoff() {
@@ -60,79 +85,16 @@ public class ModelRunner {
 		GLOBAL_PREDICTION_CUTOFF = cutoff;
 	}
 
-	public Vocabulary getVocabulary() {
-		return this.lexerRunner.getVocabulary();
-	}
-	
-	/**
-	 * Indicate that we are testing on the training set,
-	 * which means we must 'forget' any files prior to modeling them and re-learn them afterwards.
-	 * <br/>
-	 * If nesting is enabled, this may reconfigure the nesting setup to match.
-	 * For better performance, set self-testing before enabling nesting.
-	 */
-	public void setSelfTesting(boolean selfTesting) {
-		if (selfTesting != this.selfTesting) {
-			this.selfTesting = selfTesting;
-			// If self-testing has changed and this model is already nested,
-			// we must re-calibrate the nester as well
-			if (this.isNested()) this.setNested(this.nester.getTestRoot());
-		}
-	}
-	
-	/**
-	 * Returns whether or not the model is set up to run self-testing (training on test-set)
-	 */
-	public boolean isSelfTesting() {
-		return this.selfTesting;
-	}
-	
-	/**
-	 * <b>Important:</b> if self-testing is the goal, please enable it before enabling nested mode!
-	 * Otherwise, self-testing will learn a model over all test data now.
-	 * <br/>
-	 * Sets the nature of this ModelRunner to automatically nest a model hierarchy around any file to be modeled.
-	 * This hierarchy will be "rooted" in the highest test directory; hence the need to pass this as a parameter.
-	 * 
-	 * @param testRoot The directory within which all test files will reside.
-	 * @param testBaseModel The model at testRoot.
-	 */
-	public void setNested(File testRoot) {
-		if (this.selfTesting) {
-			this.nester = new Nester(NGramModel.standard(), this.lexerRunner, testRoot, this.model);
-		}
-		else {
-			Model testBaseModel = NGramModel.standard();
-			new ModelRunner(this.lexerRunner, testBaseModel).learn(testRoot);
-			this.nester = new Nester(this.model, this.lexerRunner, testRoot, testBaseModel);
-		}
-	}
-	
-	/**
-	 * Returns whether or not the model is set up to run self-testing (training on test-set)
-	 */
-	public boolean isNested() {
-		return this.nester != null;
-	}
-	
-	public void notify(File f) {
-		if (this.isNested()) this.nester.updateNesting(f);
-		else this.model.notify(f);
-	}
-
 	private final long LEARN_PRINT_INTERVAL = 1000000;
 	private long[] learnStats = new long[2];
 
-	public void learn(File file) {
+	public void learnDirectory(File file) {
 		this.learnStats = new long[] { 0, -System.currentTimeMillis() };
-		try {
-			Files.walk(file.toPath())
-				.map(Path::toFile)
-				.filter(File::isFile)
-				.forEach(f -> learnFile(f));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		this.lexerRunner.lexDirectory(file)
+			.forEach(p -> {
+				this.model.notify(p.left);
+				this.learnTokens(p.right);
+			});
 		if (this.learnStats[0] > LEARN_PRINT_INTERVAL && this.learnStats[1] != 0) {
 			System.out.printf("Counting complete: %d tokens processed in %ds\n",
 					this.learnStats[0], (System.currentTimeMillis() + this.learnStats[1])/1000);
@@ -140,23 +102,13 @@ public class ModelRunner {
 	}
 	
 	public void learnFile(File f) {
-		if (!f.getName().matches(this.lexerRunner.getRegex())) return;
-		notify(f);
-		learnTokens(this.lexerRunner.lex(f));
+		if (!this.lexerRunner.willLexFile(f)) return;
+		this.model.notify(f);
+		learnTokens(this.lexerRunner.lexFile(f));
 	}
 
 	public void learnContent(String content) {
-		learnTokens(this.lexerRunner.lex(content));
-	}
-
-	public void learnLines(String[] lines) {
-		learnLines(Arrays.stream(lines));
-	}
-	public void learnLines(List<String> lines) {
-		learnLines(lines.stream());
-	}
-	public void learnLines(Stream<String> lines) {
-		learnTokens(this.lexerRunner.lex(lines));
+		learnTokens(this.lexerRunner.lexText(content));
 	}
 
 	public void learnTokens(Stream<Stream<String>> lexed) {
@@ -181,7 +133,7 @@ public class ModelRunner {
 		}
 	}
 	
-	public void forget(File file) {
+	public void forgetDirectory(File file) {
 		try {
 			Files.walk(file.toPath())
 				.map(Path::toFile)
@@ -193,23 +145,13 @@ public class ModelRunner {
 	}
 	
 	public void forgetFile(File f) {
-		if (!f.getName().matches(this.lexerRunner.getRegex())) return;
-		notify(f);
-		forgetTokens(this.lexerRunner.lex(f));
+		if (!this.lexerRunner.willLexFile(f)) return;
+		this.model.notify(f);
+		forgetTokens(this.lexerRunner.lexFile(f));
 	}
 	
 	public void forgetContent(String content) {
-		forgetTokens(this.lexerRunner.lex(content));
-	}
-
-	public void forgetLines(String[] lines) {
-		forgetLines(Arrays.stream(lines));
-	}
-	public void forgetLines(List<String> lines) {
-		forgetLines(lines.stream());
-	}
-	public void forgetLines(Stream<String> lines) {
-		forgetTokens(this.lexerRunner.lex(lines));
+		forgetTokens(this.lexerRunner.lexText(content));
 	}
 	
 	public void forgetTokens(Stream<Stream<String>> lexed) {
@@ -228,40 +170,24 @@ public class ModelRunner {
 	private double ent = 0.0;
 	private double mrr = 0.0;
 	
-	public Stream<Pair<File, List<List<Double>>>> model(File file) {
+	public Stream<Pair<File, List<List<Double>>>> modelDirectory(File file) {
 		this.modelStats = new long[] { 0, -System.currentTimeMillis()  };
 		this.ent = 0.0;
-		try {
-			return Files.walk(file.toPath())
-				.map(Path::toFile)
-				.filter(File::isFile)
-				.map(f -> Pair.of(f, modelFile(f)))
-				.filter(p -> p != null);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
+		return this.lexerRunner.lexDirectory(file)
+			.map(p -> {
+				this.model.notify(p.left);
+				return Pair.of(p.left, this.modelTokens(p.right));
+			});
 	}
 
 	public List<List<Double>> modelFile(File f) {
-		if (!f.getName().matches(this.lexerRunner.getRegex())) return null;
-		notify(f);
-		List<List<Double>> lineProbs = modelTokens(this.lexerRunner.lex(f));
-		return lineProbs;
+		if (!this.lexerRunner.willLexFile(f)) return null;
+		this.model.notify(f);
+		return modelTokens(this.lexerRunner.lexFile(f));
 	}
 
 	public List<List<Double>> modelContent(String content) {
-		return modelTokens(this.lexerRunner.lex(content));
-	}
-
-	public List<List<Double>> modelLines(String[] lines) {
-		return modelLines(Arrays.stream(lines));
-	}
-	public List<List<Double>> modelLines(List<String> lines) {
-		return modelLines(lines.stream());
-	}
-	public List<List<Double>> modelLines(Stream<String> lines) {
-		return modelTokens(this.lexerRunner.lex(lines));
+		return modelTokens(this.lexerRunner.lexText(content));
 	}
 
 	public List<List<Double>> modelTokens(Stream<Stream<String>> lexed) {
@@ -288,26 +214,17 @@ public class ModelRunner {
 	}
 
 	protected List<Double> modelSequence(List<Integer> tokens) {
-		if (this.isNested()) {
-			return this.nester.getMix().model(tokens).stream()
-					.map(this::toProb)
-					.map(ModelRunner::toEntropy)
-					.collect(Collectors.toList());
-		}
-		else {
-			if (this.selfTesting) this.model.forget(tokens);
-			List<Double> entropies = this.model.model(tokens).stream()
-				.map(this::toProb)
-				.map(ModelRunner::toEntropy)
-				.collect(Collectors.toList());
-			if (this.selfTesting) this.model.learn(tokens);
-			return entropies;
-		}
+		if (this.selfTesting) this.model.forget(tokens);
+		List<Double> entropies = this.model.model(tokens).stream()
+			.map(this::toProb)
+			.map(ModelRunner::toEntropy)
+			.collect(Collectors.toList());
+		if (this.selfTesting) this.model.learn(tokens);
+		return entropies;
 	}
 
 	private void logModelingProgress(List<Double> modeled) {
-		DoubleSummaryStatistics stats = modeled.stream()
-				.skip(this.lexerRunner.hasSentenceMarkers() ? 1 : 0)
+		DoubleSummaryStatistics stats = modeled.stream().skip(1)
 				.mapToDouble(Double::doubleValue).summaryStatistics();
 		long prevCount = this.modelStats[0];
 		this.modelStats[0] += stats.getCount();
@@ -323,38 +240,21 @@ public class ModelRunner {
 	public Stream<Pair<File, List<List<Double>>>> predict(File file) {
 		this.modelStats = new long[] { 0, -System.currentTimeMillis()  };
 		this.mrr = 0.0;
-		try {
-			return Files.walk(file.toPath())
-				.map(Path::toFile)
-				.filter(File::isFile)
-				.map(f -> Pair.of(f, predictFile(f)))
-				.filter(p -> p != null);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return null;
+		return this.lexerRunner.lexDirectory(file)
+			.map(p -> {
+				this.model.notify(p.left);
+				return Pair.of(p.left, this.predictTokens(p.right));
+			});
 	}
 
 	public List<List<Double>> predictFile(File f) {
-		if (!f.getName().matches(this.lexerRunner.getRegex())) return null;
-		notify(f);
-		List<List<Double>> lineProbs = predictTokens(this.lexerRunner.lex(f));
-		return lineProbs;
+		if (!this.lexerRunner.willLexFile(f)) return null;
+		this.model.notify(f);
+		return predictTokens(this.lexerRunner.lexFile(f));
 	}
-
 
 	public List<List<Double>> predictContent(String content) {
-		return predictTokens(this.lexerRunner.lex(content));
-	}
-
-	public List<List<Double>> predictLines(String[] lines) {
-		return predictLines(Arrays.stream(lines));
-	}
-	public List<List<Double>> predictLines(List<String> lines) {
-		return predictLines(lines.stream());
-	}
-	public List<List<Double>> predictLines(Stream<String> lines) {
-		return predictTokens(this.lexerRunner.lex(lines));
+		return predictTokens(this.lexerRunner.lexText(content));
 	}
 
 	public List<List<Double>> predictTokens(Stream<Stream<String>> lexed) {
@@ -382,28 +282,18 @@ public class ModelRunner {
 	}
 
 	protected List<Double> predictSequence(List<Integer> tokens) {
-		if (this.isNested()) {
-			List<List<Integer>> preds = toPredictions(this.nester.getMix().predict(tokens));
-			return IntStream.range(0, tokens.size())
-					.mapToObj(i -> preds.get(i).indexOf(tokens.get(i)))
-					.map(ModelRunner::toMRR)
-					.collect(Collectors.toList());
-		}
-		else {
-			if (this.selfTesting) this.model.forget(tokens);
-			List<List<Integer>> preds = toPredictions(this.model.predict(tokens));
-			List<Double> mrrs = IntStream.range(0, tokens.size())
-					.mapToObj(i -> preds.get(i).indexOf(tokens.get(i)))
-					.map(ModelRunner::toMRR)
-					.collect(Collectors.toList());
-			if (this.selfTesting) this.model.learn(tokens);
-			return mrrs;
-		}
+		if (this.selfTesting) this.model.forget(tokens);
+		List<List<Integer>> preds = toPredictions(this.model.predict(tokens));
+		List<Double> mrrs = IntStream.range(0, tokens.size())
+				.mapToObj(i -> preds.get(i).indexOf(tokens.get(i)))
+				.map(ModelRunner::toMRR)
+				.collect(Collectors.toList());
+		if (this.selfTesting) this.model.learn(tokens);
+		return mrrs;
 	}
 
 	private void logPredictionProgress(List<Double> modeled) {
-		DoubleSummaryStatistics stats = modeled.stream()
-				.skip(this.lexerRunner.hasSentenceMarkers() ? 1 : 0)
+		DoubleSummaryStatistics stats = modeled.stream().skip(1)
 				.mapToDouble(Double::doubleValue).summaryStatistics();
 		long prevCount = this.modelStats[0];
 		this.modelStats[0] += stats.getCount();
@@ -473,16 +363,15 @@ public class ModelRunner {
 	}
 	
 	private DoubleSummaryStatistics getFileStats(Stream<List<List<Double>>> fileProbs) {
-		boolean skip = this.lexerRunner.hasSentenceMarkers();
 		if (this.lexerRunner.isPerLine()) {
 			return fileProbs.flatMap(List::stream)
-					.flatMap(l -> l.stream().skip(skip ? 1 : 0))
+					.flatMap(l -> l.stream().skip(1))
 					.mapToDouble(p -> p).summaryStatistics();
 		}
 		else {
 			return fileProbs.flatMap(f -> f.stream()
 						.flatMap(l -> l.stream())
-						.skip(skip ? 1 : 0))
+						.skip(1))
 					.mapToDouble(p -> p).summaryStatistics();
 		}
 	}

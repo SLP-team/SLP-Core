@@ -28,14 +28,12 @@ public class Vocabulary {
 	private Map<String, Integer> wordIndices;
 	private List<String> words;
 	private List<Integer> counts;
-	private int size;
 	
 	public Vocabulary() {
 		this.wordIndices = new HashMap<>();
 		this.words = new ArrayList<>();
 		this.counts = new ArrayList<>();
 		this.closed = false;
-		this.size = 0;
 		addUnk();	
 	}
 	
@@ -45,7 +43,6 @@ public class Vocabulary {
 		this.wordIndices.put(UNK, 0);
 		this.words.add(UNK);
 		this.counts.add(0);
-		this.size++;
 	}
 	
 	public Map<String, Integer> wordIndices() {
@@ -61,15 +58,7 @@ public class Vocabulary {
 	}
 	
 	public int size() {
-		return size;
-	}
-	
-	/**
-	 * To be determined if this is a good solution to false this inflation
-	 * @param offset
-	 */
-	public void adjustSize(int offset) {
-		size += offset;
+		return this.words.size();
 	}
 	
 	public void close() {
@@ -90,22 +79,25 @@ public class Vocabulary {
 			counts.remove(counts.size() - 1);
 			String word = words.remove(words.size() - 1);
 			wordIndices.remove(word);
-			size--;
 		}
 	}
 	
-	void store(String token, int count) {
+	public int store(String token) {
+		return store(token, 1);
+	}
+		
+	public int store(String token, int count) {
 		Integer index = wordIndices.get(token);
 		if (index == null) {
 			index = wordIndices.size();
 			wordIndices.put(token, index);
 			words.add(token);
 			counts.add(count);
-			size++;
 		}
 		else {
 			counts.set(index, count);
 		}
+		return index;
 	}
 	
 	public Stream<Integer> toIndices(Stream<String> tokens) {
@@ -126,7 +118,6 @@ public class Vocabulary {
 				index = wordIndices.size();
 				wordIndices.put(token, index);
 				words.add(token);
-				size++;
 				counts.add(1);
 			}
 		}

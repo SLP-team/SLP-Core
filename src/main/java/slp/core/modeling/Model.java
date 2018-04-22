@@ -33,12 +33,6 @@ import slp.core.util.Pair;
  *
  */
 public interface Model {
-	
-	/**
-	 * Creates a new instance of the same type as this model, but without any backing data if applicable.
-	 * This allows the creation of many isomorphic models, as for example required by nesting.
-	 */
-	Model copy();
 
 	/**
 	 * Notifies model of upcoming test file, allowing it to set up accordingly (e.g. for nested models)
