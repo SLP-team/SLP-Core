@@ -22,6 +22,7 @@ public class CounterIO {
     }
     
 	public static Counter readCounter(File file) {
+		System.out.println("Reading counter from: " + file);
         try (FileInputStream is = new FileInputStream(file)) {
         	final Unmarshaller unmarshaller = marshallerFactory.createUnmarshaller(configuration);
             unmarshaller.start(Marshalling.createByteInput(is));
@@ -37,6 +38,7 @@ public class CounterIO {
 	}
 
 	public static void writeCounter(Counter counter, File file) {
+		System.out.println("Writing counter to: " + file);
 		try (FileOutputStream os = new FileOutputStream(file)) {
         	final Marshaller marshaller = marshallerFactory.createMarshaller(configuration);
             marshaller.start(Marshalling.createByteOutput(os));

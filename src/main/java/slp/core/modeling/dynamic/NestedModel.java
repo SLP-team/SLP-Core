@@ -27,6 +27,14 @@ public class NestedModel extends AbstractModel {
 	private List<File> files;
 	private Model mixed;
 
+	public NestedModel(ModelRunner baseRunner, File testRoot) {
+		this(baseRunner.getModel(), baseRunner.getLexerRunner(), baseRunner.getVocabulary(), testRoot);
+	}
+
+	public NestedModel(ModelRunner baseRunner, File testRoot, Model testBaseModel) {
+		this(baseRunner.getModel(), baseRunner.getLexerRunner(), baseRunner.getVocabulary(), testRoot, testBaseModel);
+	}
+	
 	public NestedModel(Model global, LexerRunner lexerRunner, Vocabulary vocabulary, File testRoot) {
 		this(global, lexerRunner, vocabulary, testRoot, null);
 	}

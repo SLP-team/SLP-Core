@@ -51,6 +51,18 @@ public class ModelRunner {
 		this.model = model;
 	}
 	
+	/**
+	 * Convenience function that creates a new {@link ModelRunner} instance for the provided {@link Model}
+	 * that is backed by the same {@link LexerRunner} and {@link Vocabulary}.
+	 * 
+	 * @param model The model to provide a {@link ModelRunner} for.
+	 * @return A new {@link ModelRunner} for this {@link Model},
+	 * 		   with the current {@link ModelRunner}'s {@link LexerRunner} and {@link Vocabulary}
+	 */
+	public ModelRunner copyForModel(Model model) {
+		return new ModelRunner(model, this.lexerRunner, this.vocabulary);
+	}
+	
 	public LexerRunner getLexerRunner() {
 		return this.lexerRunner;
 	}
