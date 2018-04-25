@@ -69,24 +69,11 @@ public class Vocabulary {
 		closed = false;
 	}
 	
-	private int checkPoint;
-	public void setCheckpoint() {
-		checkPoint = words.size();
-	}
-	
-	public void restoreCheckpoint() {
-		for (int i = words.size(); i > checkPoint; i--) {
-			counts.remove(counts.size() - 1);
-			String word = words.remove(words.size() - 1);
-			wordIndices.remove(word);
-		}
-	}
-	
-	public int store(String token) {
+	public synchronized int store(String token) {
 		return store(token, 1);
 	}
 		
-	public int store(String token, int count) {
+	public synchronized int store(String token, int count) {
 		Integer index = wordIndices.get(token);
 		if (index == null) {
 			index = wordIndices.size();
@@ -108,17 +95,14 @@ public class Vocabulary {
 		return tokens.stream().map(this::toIndex).collect(Collectors.toList());
 	}
 
-	public Integer toIndex(String token) {
+	public synchronized Integer toIndex(String token) {
 		Integer index = wordIndices.get(token);
 		if (index == null) {
 			if (closed) {
-				return wordIndices.get(UNK);
+				index = wordIndices.get(UNK);
 			}
 			else {
-				index = wordIndices.size();
-				wordIndices.put(token, index);
-				words.add(token);
-				counts.add(1);
+				index = store(token);
 			}
 		}
 		return index;
