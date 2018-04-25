@@ -12,6 +12,14 @@ public class Pair<T, V> {
 	public static <A, B> Pair<A, B> of(A a, B b) {
 		return new Pair<A, B>(a, b);
 	}
+
+	public T left() {
+		return this.left;
+	}
+	
+	public V right() {
+		return this.right;
+	}
 	
 	@Override
 	public boolean equals(Object other) {

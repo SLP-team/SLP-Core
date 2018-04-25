@@ -11,8 +11,16 @@ public class WBModel extends NGramModel {
 		super();
 	}
 	
+	public WBModel(int order) {
+		super(order);
+	}
+
 	public WBModel(Counter counter) {
 		super(counter);
+	}
+	
+	public WBModel(int order, Counter counter) {
+		super(order, counter);
 	}
 	
 	@Override

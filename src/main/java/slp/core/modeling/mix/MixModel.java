@@ -19,6 +19,10 @@ public abstract class MixModel implements Model {
 		this.right = model2;
 	}
 	
+	public static MixModel standard(Model model1, Model model2) {
+		return new InverseMixModel(model1, model2);
+	}
+	
 	public Model getLeft() {
 		return this.left;
 	}
@@ -236,5 +240,10 @@ public abstract class MixModel implements Model {
 		this.left.unPauseDynamic();
 		this.right.unPauseDynamic();
 		return mixed;
+	}
+	
+	@Override
+	public String toString() {
+		return this.getClass().getSimpleName() + "[" + this.left.toString() + ", " + this.right.toString() + "]";
 	}
 }

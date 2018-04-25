@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.jdt.core.ToolFactory;
@@ -18,13 +17,12 @@ import slp.core.lexing.Lexer;
 public class JavaLexer implements Lexer {
 
 	@Override
-	public Stream<Stream<String>> lex(List<String> lines) {
-		String text = lines.stream().collect(Collectors.joining("\n"));
-		return lex(text);
+	public Stream<String> lexLine(String line) {
+		return tokenizeLines(line).get(0).stream();
 	}
 	
 	@Override
-	public Stream<Stream<String>> lex(String text) {
+	public Stream<Stream<String>> lexText(String text) {
 		return tokenizeLines(text).stream().map(List::stream);
 	}
 
