@@ -199,7 +199,7 @@ public class LexerRunner {
 					outDir.mkdirs();
 					try {
 						Stream<Stream<String>> lexed = lexFile(fIn);
-						lexed.map(l -> l.map(w -> vocabulary == null ? w : vocabulary.store(w)+""));
+						lexed = lexed.map(l -> l.map(w -> vocabulary == null ? w : vocabulary.store(w)+""));
 						Writer.writeTokenized(fOut, lexed);
 					} catch (IOException e) {
 						System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);

@@ -4,7 +4,7 @@
 
 	<groupId>SLP</groupId>
 	<artifactId>SLP_Core</artifactId>
-	<version>0.2</version>
+	<version>0.3</version>
 	<packaging>jar</packaging>
 
 	<name>Core</name>
