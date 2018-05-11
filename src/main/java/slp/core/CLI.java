@@ -11,8 +11,8 @@ import slp.core.counting.Counter;
 import slp.core.counting.giga.GigaCounter;
 import slp.core.counting.io.CounterIO;
 import slp.core.counting.trie.AbstractTrie;
-import slp.core.example.JavaRunner;
-import slp.core.example.NLRunner;
+import slp.core.example.BasicJavaRunner;
+import slp.core.example.BasicNLRunner;
 import slp.core.io.Writer;
 import slp.core.lexing.Lexer;
 import slp.core.lexing.code.JavaLexer;
@@ -38,7 +38,7 @@ import slp.core.util.Pair;
 /**
  * Provides a command line interface to a runnable jar produced from this source code.
  * Using SLP-Core as a library can give access to more powerful usage;
- * see {@link JavaRunner} and {@link NLRunner} to get started.
+ * see {@link BasicJavaRunner} and {@link BasicNLRunner} to get started.
  * 
  * @author Vincent Hellendoorn
  *

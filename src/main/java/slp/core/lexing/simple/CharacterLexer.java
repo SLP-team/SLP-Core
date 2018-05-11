@@ -9,6 +9,6 @@ public class CharacterLexer implements Lexer {
 
 	@Override
 	public Stream<String> lexLine(String line) {
-		return Arrays.stream(line.split(""));
+		return Arrays.stream(line.split("")).filter(c -> !c.matches("\\s"));
 	}
 }

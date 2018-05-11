@@ -45,8 +45,8 @@ public class ModelRunner {
 
 	private boolean selfTesting = false;
 	
-	public ModelRunner(Model model, LexerRunner lexer, Vocabulary vocabulary) {
-		this.lexerRunner = lexer;
+	public ModelRunner(Model model, LexerRunner lexerRunner, Vocabulary vocabulary) {
+		this.lexerRunner = lexerRunner;
 		this.vocabulary = vocabulary;
 		this.model = model;
 	}
