@@ -302,6 +302,7 @@ public abstract class AbstractTrie implements Counter {
 
 	private static void updateNCounts(int n, int count, int adj) {
 		if (n == 0) return;
+		if (n > ModelRunner.DEFAULT_NGRAM_ORDER) return;
 		int[] toUpdate = nCounts[n - 1];
 		int currIndex = Math.min(count, toUpdate.length);
 		int prevIndex = Math.min(count - adj, toUpdate.length);

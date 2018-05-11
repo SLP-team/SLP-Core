@@ -45,8 +45,8 @@ public class ModelRunner {
 
 	private boolean selfTesting = false;
 	
-	public ModelRunner(Model model, LexerRunner lexer, Vocabulary vocabulary) {
-		this.lexerRunner = lexer;
+	public ModelRunner(Model model, LexerRunner lexerRunner, Vocabulary vocabulary) {
+		this.lexerRunner = lexerRunner;
 		this.vocabulary = vocabulary;
 		this.model = model;
 	}
@@ -201,7 +201,6 @@ public class ModelRunner {
 	}
 
 	public List<List<Double>> modelTokens(Stream<Stream<String>> lexed) {
-		this.getVocabulary().setCheckpoint();
 		List<List<Double>> lineProbs;
 		if (this.lexerRunner.isPerLine()) {
 			lineProbs = lexed.map(this.getVocabulary()::toIndices)
@@ -219,7 +218,6 @@ public class ModelRunner {
 			lineProbs = toLines(modeled, lineLengths);
 			logModelingProgress(modeled);
 		}
-		this.getVocabulary().restoreCheckpoint();
 		return lineProbs;
 	}
 
@@ -268,7 +266,6 @@ public class ModelRunner {
 	}
 
 	public List<List<Double>> predictTokens(Stream<Stream<String>> lexed) {
-		this.getVocabulary().setCheckpoint();
 		List<List<Double>> lineProbs;
 		if (this.lexerRunner.isPerLine()) {
 			lineProbs = lexed
@@ -287,7 +284,6 @@ public class ModelRunner {
 			lineProbs = toLines(modeled, lineLengths);
 			logPredictionProgress(modeled);
 		}
-		this.getVocabulary().restoreCheckpoint();
 		return lineProbs;
 	}
 

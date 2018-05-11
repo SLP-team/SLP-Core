@@ -15,7 +15,15 @@ import slp.core.translating.Vocabulary;
 import slp.core.translating.VocabularyRunner;
 import slp.core.util.Pair;
 
-public class NLRunner {
+/**
+ * This example shows a typical use-case for natural language of this tool with detailed comments.
+ * We setup a {@link LexerRunner} with a {@link Lexer}, train a {@link Model} using a {@link ModelRunner}
+ * and print the overall result. This is a good starting point for understanding the tool's API.
+ * See also the {@link BasicJavaRunner} for an equivalent example with typical settings for source code modeling tasks.
+ * 
+ * @author Vincent Hellendoorn
+ */
+public class BasicNLRunner {
 	public static void main(String[] args) {
 		if (args.length < 1) return;
 		// Assumes at least one argument, the path (file or directory) to train on

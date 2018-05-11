@@ -18,7 +18,18 @@ import slp.core.modeling.runners.ModelRunner;
 import slp.core.translating.Vocabulary;
 import slp.core.util.Pair;
 
-public class JavaRunner {
+/**
+ * This example shows a typical use-case for (Java) source code of this tool with detailed comments.
+ * We setup a {@link LexerRunner} with a {@link Lexer}, train a {@link Model} using a {@link ModelRunner}
+ * and print the overall result. This is a good starting point for understanding the tool's API.
+ * See also the {@link BasicNLRunner} for an equivalent example with typical settings for natural language modeling tasks.
+ * <br /><br />
+ * More complex use-cases can be found in the other examples, such finding entropy for each token and line,
+ * using a bi-directional model (in parallel with others), .
+ * 
+ * @author Vincent Hellendoorn
+ */
+public class BasicJavaRunner {
 	public static void main(String[] args) {
 		if (args.length < 1) return;
 		// Assumes at least one argument, the path (file or directory) to train on

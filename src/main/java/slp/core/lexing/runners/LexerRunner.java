@@ -67,10 +67,10 @@ public class LexerRunner {
 	 * If set to 'true', this adds delimiters (i.e. "&lt;s&gt;" and "&lt;/s&gt;"; see {@link Vocabulary}) to each sentence.
 	 * A sentence is either every line in a file (if this LexerRunner is created to lex lines separately) or a whole file.
 	 * <br />
-	 * @param useDelimiters Whether to add delimiters to each sentence. Default: false, which assumes these have already been added.
+	 * @param addDelimiters Whether to add delimiters to each sentence. Default: false, which assumes these have already been added.
 	 */
-	public void setSentenceMarkers(boolean useDelimiters) {
-		this.sentenceMarkers = useDelimiters;
+	public void setSentenceMarkers(boolean addDelimiters) {
+		this.sentenceMarkers = addDelimiters;
 	}
 	
 	/**
@@ -199,7 +199,7 @@ public class LexerRunner {
 					outDir.mkdirs();
 					try {
 						Stream<Stream<String>> lexed = lexFile(fIn);
-						lexed.map(l -> l.map(w -> vocabulary == null ? w : vocabulary.store(w)+""));
+						lexed = lexed.map(l -> l.map(w -> vocabulary == null ? w : vocabulary.store(w)+""));
 						Writer.writeTokenized(fOut, lexed);
 					} catch (IOException e) {
 						System.out.println("Exception in LexerBuilder.tokenize(), from " + fIn + " to " + fOut);
