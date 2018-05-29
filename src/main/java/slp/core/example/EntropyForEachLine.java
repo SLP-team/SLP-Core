@@ -17,9 +17,10 @@ import slp.core.modeling.runners.ModelRunner;
 import slp.core.translating.Vocabulary;
 
 /**
- * This example shows how to get the entropy for each line and for each token on each line nin a test file.
+ * This example shows how to get the entropy for each line and for each token on each line in a test file.
  * It assumes you are passing it two arguments: a train file/directory and a test file,
  * both with Java code (but you can change that below).
+ * You can replace the model here with a bi-directional model (if applicable) for better performance (see {@link ParallelBidirectional})
  * See the {@link BasicJavaRunner} for a more detailed getting-started guide.
  * 
  * @author Vincent Hellendoorn

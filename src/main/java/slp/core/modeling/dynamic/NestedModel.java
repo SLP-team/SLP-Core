@@ -35,6 +35,10 @@ public class NestedModel extends AbstractModel {
 		this(baseRunner.getModel(), baseRunner.getLexerRunner(), baseRunner.getVocabulary(), testRoot, testBaseModel);
 	}
 	
+	public NestedModel(LexerRunner lexerRunner, Vocabulary vocabulary, File testRoot) {
+		this(NGramModel.standard(), lexerRunner, vocabulary, testRoot, null);
+	}
+	
 	public NestedModel(Model global, LexerRunner lexerRunner, Vocabulary vocabulary, File testRoot) {
 		this(global, lexerRunner, vocabulary, testRoot, null);
 	}

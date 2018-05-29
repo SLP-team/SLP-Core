@@ -95,9 +95,9 @@ public class CLI {
 		mode = arguments[0].toLowerCase();
 		
 		lexer = getLexer();
-		model = getModel();
 		lexerRunner = setupLexerRunner();
 		vocabulary = setupVocabulary();
+		model = getModel();
 		modelRunner = setupModelRunner();
 		setupLogger();
 		switch (mode) {
@@ -300,7 +300,7 @@ public class CLI {
 
 	private static Model wrapModel(Model m) {
 		if (isSet(NESTED)) {
-			if (isSet(TEST)) m = new NestedModel(model, lexerRunner, vocabulary, new File(getArg(TEST)));
+			if (isSet(TEST)) m = new NestedModel(m, lexerRunner, vocabulary, new File(getArg(TEST)));
 			else exit("Nested mode set, but no test directory given!");
 		}
 		if (isSet(CACHE)) m = MixModel.standard(m, new CacheModel());

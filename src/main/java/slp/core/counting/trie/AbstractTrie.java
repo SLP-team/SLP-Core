@@ -61,7 +61,9 @@ public abstract class AbstractTrie implements Counter {
 
 	@Override
 	public final int getCountofCount(int n, int count) {
-		return nCounts[n - 1][count - 1];
+		int minN = Math.min(n, nCounts.length) - 1;
+		int minC = Math.min(count, nCounts[minN].length) - 1;
+		return nCounts[minN][minC];
 	}
 	
 	@Override

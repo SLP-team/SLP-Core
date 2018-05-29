@@ -189,6 +189,7 @@ public class LexerRunner {
 			Files.walk(from.toPath())
 				.map(Path::toFile)
 				.filter(File::isFile)
+				.filter(this::willLexFile)
 				.forEach(fIn -> {
 					if (++count[0] % 1000 == 0) {
 						System.out.println("Lexing at file " + count[0]);
