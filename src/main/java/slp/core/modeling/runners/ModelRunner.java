@@ -245,7 +245,7 @@ public class ModelRunner {
 		}
 	}
 
-	public Stream<Pair<File, List<List<Double>>>> predict(File file) {
+	public Stream<Pair<File, List<List<Double>>>> predictDirectory(File file) {
 		this.modelStats = new long[] { 0, -System.currentTimeMillis()  };
 		this.mrr = 0.0;
 		return this.lexerRunner.lexDirectory(file)

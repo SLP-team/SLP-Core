@@ -416,7 +416,7 @@ public class CLI {
 			exit("Counter file to use not found: " + getArg(COUNTER));
 		}
 		
-		Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predict(inDir);
+		Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predictDirectory(inDir);
 		int[] fileCount = { 0 };
 		DoubleSummaryStatistics stats = modelRunner.getStats(
 				fileMRRs.peek(f -> Writer.writeEntropies(lexerRunner, f))
@@ -428,7 +428,7 @@ public class CLI {
 	private static void trainPredict() {
 		trainModel();
 		File testDir = getTestFile();
-		Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predict(testDir);
+		Stream<Pair<File, List<List<Double>>>> fileMRRs = modelRunner.predictDirectory(testDir);
 		int[] fileCount = { 0 };
 		DoubleSummaryStatistics stats = modelRunner.getStats(
 				fileMRRs.peek(f -> Writer.writeEntropies(lexerRunner, f))
