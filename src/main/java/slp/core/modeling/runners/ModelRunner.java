@@ -312,6 +312,80 @@ public class ModelRunner {
 		}
 	}
 
+	public Stream<Pair<File, List<List<Completion>>>> completeDirectory(File file) {
+		this.modelStats = new long[] { 0, -System.currentTimeMillis()  };
+		this.mrr = 0.0;
+		return this.lexerRunner.lexDirectory(file)
+			.map(p -> {
+				this.model.notify(p.left);
+				return Pair.of(p.left, this.completeTokens(p.right));
+			});
+	}
+
+	public List<List<Completion>> completeFile(File f) {
+		if (!this.lexerRunner.willLexFile(f)) return null;
+		this.model.notify(f);
+		return completeTokens(this.lexerRunner.lexFile(f));
+	}
+
+	public List<List<Completion>> completeContent(String content) {
+		return completeTokens(this.lexerRunner.lexText(content));
+	}
+
+	public List<List<Completion>> completeTokens(Stream<Stream<String>> lexed) {
+		List<List<Completion>> lineCompletions;
+		if (this.lexerRunner.isPerLine()) {
+			lineCompletions = lexed
+				.map(this.getVocabulary()::toIndices)
+				.map(l -> l.collect(Collectors.toList()))
+				.map(l -> completeSequence(l))
+				.peek(this::logCompletionProgress)
+				.collect(Collectors.toList());
+		} else {
+			List<Integer> lineLengths = new ArrayList<>();
+			List<Completion> commpletions = completeSequence(lexed
+				.map(this.getVocabulary()::toIndices)
+				.map(l -> l.collect(Collectors.toList()))
+				.peek(l -> lineLengths.add(l.size()))
+				.flatMap(l -> l.stream()).collect(Collectors.toList()));
+			lineCompletions = toLines(commpletions, lineLengths);
+			logCompletionProgress(commpletions);
+		}
+		return lineCompletions;
+	}
+
+	protected List<Completion> completeSequence(List<Integer> tokens) {
+		if (this.selfTesting) this.model.forget(tokens);
+		List<Map<Integer, Pair<Double, Double>>> preds = this.model.predict(tokens);
+		if (this.selfTesting) this.model.learn(tokens);
+		List<Completion> rankings = IntStream.range(0, preds.size())
+			.mapToObj(i -> {
+				List<Pair<Integer, Double>> completions = preds.get(i).entrySet().stream()
+					.map(e -> Pair.of(e.getKey(), toProb(e.getValue())))
+					.sorted((p1, p2) -> -Double.compare(p1.right, p2.right))
+					.limit(GLOBAL_PREDICTION_CUTOFF)
+					.collect(Collectors.toList());
+				return new Completion(tokens.get(i), completions);
+			}).collect(Collectors.toList());
+		return rankings;
+	}
+	
+	private void logCompletionProgress(List<Completion> completions) {
+		DoubleSummaryStatistics stats = completions.stream().skip(1)
+				.map(Completion::getRank)
+				.mapToDouble(ModelRunner::toMRR)
+				.summaryStatistics();
+		long prevCount = this.modelStats[0];
+		this.modelStats[0] += stats.getCount();
+		this.mrr += stats.getSum();
+		if (this.modelStats[0] / this.MODEL_PRINT_INTERVAL > prevCount / this.MODEL_PRINT_INTERVAL
+				&& this.modelStats[1] != 0) {
+			System.out.printf("Predicting: %dK tokens processed in %ds, avg. MRR: %.4f\n",
+					Math.round(this.modelStats[0]/1e3),
+					(System.currentTimeMillis() + this.modelStats[1])/1000, this.mrr/this.modelStats[0]);
+		}
+	}
+
 	public List<Double> toProb(List<Pair<Double, Double>> probConfs) {
 		return probConfs.stream().map(this::toProb).collect(Collectors.toList());
 	}
@@ -380,5 +454,12 @@ public class ModelRunner {
 						.skip(1))
 					.mapToDouble(p -> p).summaryStatistics();
 		}
+	}
+	
+	public DoubleSummaryStatistics getCompletionStats(List<List<Completion>> completions) {
+		List<List<Double>> MRRs = completions.stream()
+			.map(l -> l.stream().map(c -> toMRR(c.getRank())))
+			.map(l -> l.collect(Collectors.toList())).collect(Collectors.toList());
+		return getFileStats(Stream.of(MRRs));
 	}
 }
