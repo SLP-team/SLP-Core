@@ -41,6 +41,10 @@ public abstract class NGramModel extends AbstractModel {
 		return this.counter;
 	}
 
+	public int getOrder() {
+		return this.order;
+	}
+
 	@Override
 	public void notify(File next) { }
 
