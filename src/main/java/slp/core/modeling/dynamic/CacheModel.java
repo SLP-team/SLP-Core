@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import slp.core.counting.Counter;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.Model;
 import slp.core.modeling.ngram.NGramModel;
@@ -48,7 +49,16 @@ public class CacheModel extends AbstractModel {
 	@Override
 	public void notify(File next) {
 		try {
-			this.model = this.model.getClass().getConstructor().newInstance();
+			if (this.model instanceof NGramModel) {
+				NGramModel asNgramModel = (NGramModel) this.model;
+				int order = asNgramModel.getOrder();
+				Counter counter = asNgramModel.getCounter();
+				this.model = this.model.getClass()
+						.getDeclaredConstructor(int.class, Counter.class)
+						.newInstance(order, counter);
+			} else {
+				this.model = this.model.getClass().getDeclaredConstructor().newInstance();
+			}
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
 				| NoSuchMethodException | SecurityException e) {
 			this.model = NGramModel.standard();
