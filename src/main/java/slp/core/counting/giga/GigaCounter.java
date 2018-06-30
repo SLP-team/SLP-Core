@@ -48,7 +48,7 @@ public class GigaCounter implements Counter {
 	private List<byte[]> graveyard;
 	
 	private final int procs;
-	private final ForkJoinPool fjp;
+	private static volatile ForkJoinPool fjp;
 	private int[][] counts;
 	private volatile boolean[] occupied;
 
@@ -60,7 +60,7 @@ public class GigaCounter implements Counter {
 
 	public GigaCounter(int procs) {
 		this.procs = procs;
-		this.fjp = new ForkJoinPool(this.procs);
+		if (fjp == null) fjp = new ForkJoinPool(this.procs);
 		
 		this.simpleCounters = IntStream.range(0, this.procs).mapToObj(i -> new HashMap<List<Integer>, Integer>()).collect(Collectors.toList());
 		this.occupied = new boolean[this.simpleCounters.size()];
@@ -143,8 +143,8 @@ public class GigaCounter implements Counter {
 		if (task.isEmpty()) return;
 		int ptr = getNextAvailable();
 		this.occupied[ptr] = true;
-		while (this.fjp.getPoolSize() > 1000);
-		this.fjp.submit(() -> {
+		while (fjp.getPoolSize() > 100);
+		fjp.submit(() -> {
 			testGraveYard(ptr);
 			if (task.get(0) instanceof List<?>) {
 				task.forEach(x -> this.simpleCounters.get(ptr).merge((List<Integer>) x, 1, Integer::sum));
