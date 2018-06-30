@@ -9,7 +9,7 @@ public class TokenizedLexer implements Lexer {
 
 	@Override
 	public Stream<String> lexLine(String line) {
-		return Arrays.stream(line.split("\t")).filter(t -> !t.isEmpty());
+		return Arrays.stream(line.split("\t+")).filter(t -> !t.isEmpty());
 	}
 	
 }

@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import slp.core.counting.Counter;
 import slp.core.lexing.runners.LexerRunner;
 import slp.core.modeling.AbstractModel;
 import slp.core.modeling.Model;
@@ -70,7 +71,16 @@ public class NestedModel extends AbstractModel {
 
 	private Model newModel() {
 		try {
-			return this.global.getClass().getDeclaredConstructor().newInstance();
+			if (this.global instanceof NGramModel) {
+				NGramModel asNgramModel = (NGramModel) this.global;
+				int order = asNgramModel.getOrder();
+				Counter counter = asNgramModel.getCounter();
+				return this.global.getClass()
+						.getDeclaredConstructor(int.class, Counter.class)
+						.newInstance(order, counter);
+			} else {
+				return this.global.getClass().getDeclaredConstructor().newInstance();
+			}
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
 				| SecurityException | InvocationTargetException | NoSuchMethodException e) {
 			e.printStackTrace();

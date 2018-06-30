@@ -9,7 +9,7 @@ public class WhitespaceLexer implements Lexer {
 
 	@Override
 	public Stream<String> lexLine(String line) {
-		return Arrays.stream(line.split("\\s+"));
+		return Arrays.stream(line.split("\\s+")).filter(w -> !w.isEmpty());
 	}
 	
 }

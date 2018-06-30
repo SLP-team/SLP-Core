@@ -79,7 +79,7 @@ public abstract class AbstractModel implements Model {
 		this.setDynamic(false);
 		Map<Integer, Pair<Double, Double>> predictions = predictAtIndex(input, index);
 		this.setDynamic(temp);
-		if (this.dynamic) this.learnToken(input, index);
+		if (this.dynamic) this.modelToken(input, index);
 		return predictions;
 	}
 	
