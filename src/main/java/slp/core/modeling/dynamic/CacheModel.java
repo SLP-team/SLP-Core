@@ -55,7 +55,7 @@ public class CacheModel extends AbstractModel {
 				Counter counter = asNgramModel.getCounter();
 				this.model = this.model.getClass()
 						.getDeclaredConstructor(int.class, Counter.class)
-						.newInstance(order, counter);
+						.newInstance(order, counter.getClass().getDeclaredConstructor().newInstance());
 			} else {
 				this.model = this.model.getClass().getDeclaredConstructor().newInstance();
 			}

@@ -77,7 +77,7 @@ public class NestedModel extends AbstractModel {
 				Counter counter = asNgramModel.getCounter();
 				return this.global.getClass()
 						.getDeclaredConstructor(int.class, Counter.class)
-						.newInstance(order, counter);
+						.newInstance(order, counter.getClass().getDeclaredConstructor().newInstance());
 			} else {
 				return this.global.getClass().getDeclaredConstructor().newInstance();
 			}
