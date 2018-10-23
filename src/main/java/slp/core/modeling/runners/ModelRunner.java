@@ -74,6 +74,10 @@ public class ModelRunner {
 	public Vocabulary getVocabulary() {
 		return this.vocabulary;
 	}
+	
+	public boolean getSelfTesting() {
+		return this.selfTesting;
+	}
 
 	/**
 	 * Enables self testing: if we are testing on data that we also trained on, and our models are able to forget events,
